@@ -119,7 +119,7 @@ public class shooter16 extends OpMode{
         // Run wheels in tank mode (note: The joystick goes negative when pushed forwards, so negate it)
 
         // Use gamepad buttons to move thearm up (Y) and down (A)
-        if (gamepad1.dpad_up && buttprevup ==false && buttnowup == true ) {
+        if (gamepad1.dpad_up && buttprevup == false && buttnowup == true ) {
             shooterspeed += 0.1F;
         }
 
