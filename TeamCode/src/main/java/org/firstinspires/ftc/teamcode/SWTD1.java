@@ -34,7 +34,9 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.ftccommon.DbgLog;
 import org.firstinspires.ftc.teamcode.helpers.LSM6;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DeviceInterfaceModule;
 import com.qualcomm.robotcore.util.Range;
@@ -44,6 +46,8 @@ import com.qualcomm.robotcore.util.Range;
  * <p>
  * Enables control of the robot via the gamepad
  */
+@TeleOp(name="ShockWave Test", group="Robot")
+//@Disabled
 public class SWTD1 extends OpMode {
 
     SWHardware robot       = new SWHardware();
@@ -166,6 +170,7 @@ public class SWTD1 extends OpMode {
 		telemetry.addData("right pwr",  "right  pwr: " + String.format("%.2f", righty));
 		telemetry.addData(" right direction", "right direction: " + String.format("%.2f", rightx));
 		telemetry.addData("left tgt pwr","left pwr: " + String.format("%.2f", lefty));
+        telemetry.addData("gyro", "gyroc" + String.format("%.2f", where));
 
 		//telemetry.addData("bwrd tgt pwr","backwards pwr: " + String.format("%.2f", backwards));
 	}

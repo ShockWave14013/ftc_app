@@ -4,10 +4,12 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DeviceInterfaceModule;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.I2cAddr;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.helpers.LSM6;
+import org.firstinspires.ftc.teamcode.helpers.LSM6Impl;
 
 /**
  * This is NOT an opmode.
@@ -55,8 +57,6 @@ public class SWHardware
         // Save reference to Hardware map
         hwMap = ahwMap;
 
-        cdim = hwMap.deviceInterfaceModule.get("dim");
-
         // Define and Initialize Motors
         LF = hwMap.dcMotor.get("L F");
         RF = hwMap.dcMotor.get("R F");
@@ -82,6 +82,11 @@ public class SWHardware
         LB.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         RF.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         RB.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        cdim = hwMap.deviceInterfaceModule.get("dim");
+        gyroc = hwMap.get(LSM6Impl.class,"gyroc");
+        //gyrot =hardwareMap.get(LSM6Impl.class,"gyro2");
+        //gyrot.setI2cAddr(I2cAddr.create8bit(0xD4));
 
 
         // Define and initialize ALL installed servos.
