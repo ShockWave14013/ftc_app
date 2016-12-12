@@ -46,39 +46,9 @@ import com.qualcomm.robotcore.util.Range;
  */
 public class SWTD1 extends OpMode {
 
-	/*
-	 * Note: the configuration of the servos is such that
-	 * as the servo servo approaches 0, the servo position moves up (away from the floor).
-	 * Also, as the claw servo approaches 0, the claw opens up (drops the game element).
-	 */
-    // TETRIX VALUES.
-    //final static double ARM_MIN_RANGE  = 0.20;
-    //final static double ARM_MAX_RANGE  = 0.90;
-    //final static double CLAW_MIN_RANGE  = 0.20;
-    //final static double CLAW_MAX_RANGE  = 0.7;
-
-	// position of the servo servo.
-	//double armPosition;
-
-	// amount to change the servo servo position.
-	//double armDelta = 0.1;
-
-	// position of the claw servo
-	// clawPosition;
-//
-	// amount to change the claw servo position by
-	//double clawDelta = 0.1;
-
-	DcMotor RV;
-	DcMotor LV;
-	DcMotor RB;
-	DcMotor LB;
-
-	DeviceInterfaceModule cdim;
-	LSM6 gyroc, gyrot;
+    SWHardware robot       = new SWHardware();
 
 	double where = 0;
-
 
 	/**
 	 * Constructor
@@ -95,19 +65,7 @@ public class SWTD1 extends OpMode {
 	@Override
 	public void init() {
 
-		RV = hardwareMap.dcMotor.get("R V");
-		LV = hardwareMap.dcMotor.get("L V");
-		RV.setDirection(DcMotor.Direction.REVERSE);
-		LV.setDirection(DcMotor.Direction.FORWARD);
-		RB = hardwareMap.dcMotor.get("R A");
-		LB = hardwareMap.dcMotor.get("L A");
-		RB.setDirection(DcMotor.Direction.REVERSE);
-		LB.setDirection(DcMotor.Direction.FORWARD);
-		RV.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-		LV.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-		RB.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-		LB.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-		cdim = hardwareMap.deviceInterfaceModule.get("dim");
+        robot.init(hardwareMap);
 
 	}
 
@@ -139,7 +97,7 @@ public class SWTD1 extends OpMode {
 		rightx = Range.clip(rightx, -maxspeed, maxspeed);
 
 		if (rightx == 0 && righty == 0 && lefty == 0){
-			where = gyroc.getHeading();
+			where = robot.gyroc.getHeading();
 		}
 		else if (lefty == 0) {
 			//forward backward and sideways if only rightstick is pressed
@@ -150,8 +108,8 @@ public class SWTD1 extends OpMode {
 				rightx *= 0.5;
 				righty *= 0.5;
 			}
-			Ferror = ((where - gyroc.getHeading()) / 200);//0.09
-			Berror = ((where - gyroc.getHeading()) / 100);//-0.09
+			Ferror = ((where - robot.gyroc.getHeading()) / 200);//0.09
+			Berror = ((where - robot.gyroc.getHeading()) / 100);//-0.09
 
 			rv += righty;
 			lv += righty;
@@ -168,7 +126,7 @@ public class SWTD1 extends OpMode {
 			rb += Berror;
 			lb -= Berror;
 
-			DbgLog.msg("where:%s,gyroHeading:%s,fe:%s,be:%s", ((Double) where).toString(), ((Double) gyroc.getHeading()).toString(), ((Double) Ferror).toString(), ((Double) Berror).toString());
+			DbgLog.msg("where:%s,gyroHeading:%s,fe:%s,be:%s", ((Double) where).toString(), ((Double) robot.gyroc.getHeading()).toString(), ((Double) Ferror).toString(), ((Double) Berror).toString());
 		}
 		else{
 			//tank drive if right stick is pressed
@@ -178,7 +136,7 @@ public class SWTD1 extends OpMode {
 				righty *= 0.39;
 				lefty *= 0.39;
 			}
-			where = gyroc.getHeading();
+			where = robot.gyroc.getHeading();
 
 			rv += righty;
 			lv += lefty;
@@ -190,10 +148,10 @@ public class SWTD1 extends OpMode {
 		rb = Range.clip(rb, -maxspeed, maxspeed);
 		lb = Range.clip(lb, -maxspeed, maxspeed);
 		//DbgLog.msg("righty:%s,rightx:%s,px:%s,py:%s,balance:%s",((Float)righty).toString(),((Float)rightx).toString(),((Float)px).toString(),((Float)py).toString(),((Float)balance).toString());
-		RV.setPower(rv);
-		LV.setPower(lv);
-		RB.setPower(rb);
-		LB.setPower(lb);
+		robot.RF.setPower(rv);
+		robot.LF.setPower(lv);
+		robot.RB.setPower(rb);
+		robot.LB.setPower(lb);
 
 		/*
 		 * Send telemetry data back to driver station. Note that if we are using
