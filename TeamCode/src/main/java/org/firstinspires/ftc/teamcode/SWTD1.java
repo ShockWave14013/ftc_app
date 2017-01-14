@@ -80,6 +80,7 @@ public class SWTD1 extends OpMode {
 	 */
 	@Override
 	public void loop() {
+		//robot.Rot.setPosition((gamepad1.left_trigger-gamepad1.right_trigger)/2.0+0.5);
 
         // note that if y equal -1 then joystick is pushed all of the way forward.
         float lefty = -gamepad1.left_stick_y;
