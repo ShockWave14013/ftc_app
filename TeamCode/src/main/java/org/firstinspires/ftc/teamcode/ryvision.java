@@ -63,6 +63,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 //import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.hardware.DcMotorController;
 import com.qualcomm.robotcore.util.RobotLog;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
@@ -95,6 +96,7 @@ public class ryvision extends LinearOpMode {
     SWHardware robot       = new SWHardware();
 
     VuforiaLocalizer vuforia;
+
 
     class mecGR {
         double yspd, xspd; // x and y componets of speed
@@ -305,7 +307,6 @@ public class ryvision extends LinearOpMode {
         mecGR drive = new mecGR();
         // We need to end up a bit more than a tile away from the target, otherwise it does not fit in the camera view
         drive.init(1900,0.2F,360-25, 0);
-
         boolean needToDrive = true;
         while (opModeIsActive()) {
 
