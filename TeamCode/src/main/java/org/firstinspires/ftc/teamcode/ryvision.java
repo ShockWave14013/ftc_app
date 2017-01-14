@@ -93,7 +93,7 @@ public class ryvision extends LinearOpMode {
     final static double ticspmm = 10000.0/2820.0;
     float maxspeed = (float)0.78;   // We are using NeverRest motors
 
-    SWHardware robot       = new SWHardware();
+    SWHardware robot = new SWHardware();
 
     VuforiaLocalizer vuforia;
 
