@@ -34,6 +34,7 @@ public class SWHardware
     public DcMotor  RF = null;
     public DcMotor  LB = null;
     public DcMotor  RB = null;
+    //public Servo    Rot= null;
     public DeviceInterfaceModule cdim = null;
     LSM6 gyroc, gyrot = null;
     // gyroc = on chasis
@@ -82,6 +83,12 @@ public class SWHardware
         LB.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         RF.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         RB.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        //Rot = hwMap.servo.get("Rotator");
+
+        //Rot.setPosition(0.5);
+
+
 
         cdim = hwMap.deviceInterfaceModule.get("dim");
         gyroc = hwMap.get(LSM6Impl.class,"gyroc");
