@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2016 Robert Atkinson
+Copyright (c) 2016 Naam en Van.
 
 All rights reserved.
 
@@ -30,11 +30,39 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
 TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+/*
+ * Autonomous program for Shockie for Velocity Vortex.
+ * Strategy: XXX
+ * - Option 1: XXX
+ * - - Drive to first beacon and press the correct button
+ * - - Finished
+ * - Option 2: XXX
+ * - - Shoot particles into centre vortex
+ * - - Finished
+ *
+ * Config options:
+ * - Alliance - red or blue
+ * - Delay before starting
+ * - Different starting positions?
+ * - Try to score particles in centre vortex?
+ * - Do both beacons?
+ *
+ * Keep in mind:
+ * - Vuforia needs to have the whole target picture in the camera view to be able to
+ *   lock on. That seems to be about 1.5 tile.
+ *
+ *   https://github.com/cheer4ftc/OpModeConfig
+ */
+
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.ftccommon.DbgLog;
 import com.qualcomm.ftcrobotcontroller.R;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.DcMotor;
+//import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.util.RobotLog;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
@@ -56,17 +84,137 @@ import java.util.List;
 //@Disabled
 public class ryvision extends LinearOpMode {
 
-    public static final String TAG = "Vuforia Sample";
+    public static final String TAG = "SW Autonomous testing";
 
     OpenGLMatrix lastLocation = null;
+
+    // Robot specific info - move into Hardware?
+    final static double ticspmm = 10000.0/2820.0;
+    float maxspeed = (float)0.78;   // We are using NeverRest motors
 
     SWHardware robot       = new SWHardware();
 
     VuforiaLocalizer vuforia;
 
+    class mecGR {
+        double yspd, xspd; // x and y componets of speed
+        double where; // Orientation of robot at the start of a move, fi. mecGR()
+        double ticsF, ticsB; // ticks needed for Front and Back wheels
+
+        // dir is looking down at robot, x axis going through its sides and y axis through its
+        // front and back. 0 is on the x axis to the right and moving CCW.
+        public void init(int afst, float spd, double dir, int orientation) {
+            spd = Math.abs(spd);
+            where = robot.gyroc.getHeading() + orientation;
+
+            robot.RF.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            robot.LF.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            robot.RB.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            robot.LB.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+            robot.RF.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            robot.LF.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            robot.RB.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            robot.LB.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+            // XXX - Compensation for different slippage of wheels in X and Y directions.
+            yspd = spd * Math.sin(Math.toRadians(dir)) * 0.91; // 0.91
+            xspd = spd * Math.cos(Math.toRadians(dir)) * 1.28; // 1.33
+            int tics = (int) (afst * ticspmm);
+            ticsF = tics * ((yspd - xspd) / spd);
+            ticsB = tics * ((yspd + xspd) / spd);
+
+            DbgLog.msg("afst:%d,spd:%.2f,dir:%.2f", afst, spd, dir);
+            DbgLog.msg("xspd:%.3f,yspd:%.3f,ticsF:%.3f,ticsB:%.3f,RB.pos:%d,RF.pos:%d", xspd, yspd, ticsF, ticsB,
+                    robot.RB.getCurrentPosition(), robot.RF.getCurrentPosition());
+        }
+
+        public boolean busy() {
+            double rf, lf, rb, lb;
+            double Ferror; // Front error correction
+            double Berror; // Back error correction. Different because of weight distribution
+
+            if (Math.abs(ticsF) > Math.abs(ticsB)) {
+                    if ((Math.abs(robot.RF.getCurrentPosition()) > Math.abs(ticsF))) {
+                        DbgLog.msg("Using RF");
+                        return false;
+                    }
+                } else {
+                    if (Math.abs(robot.RB.getCurrentPosition()) > Math.abs(ticsB)) {
+                        DbgLog.msg("Using RB");
+                        return false;
+                    }
+                }
+
+            // XXX Weight compensation 200 ... 100?
+            Ferror = ((where - robot.gyroc.getHeading()) / 100); // 200
+            Berror = ((where - robot.gyroc.getHeading()) / 100);
+
+            DbgLog.msg("xspd:%.3f,yspd:%.3f,ticsF:%.3f,ticsB:%.3f,RB.pos:%d,RF.pos:%d", xspd, yspd, ticsF, ticsB,
+                    robot.RB.getCurrentPosition(), robot.RF.getCurrentPosition());
+
+            rf = yspd;
+            lf = yspd;
+            rb = yspd;
+            lb = yspd;
+
+            rf -= xspd;
+            lf += xspd;
+            rb += xspd;
+            lb -= xspd;
+
+            rf += Ferror;
+            lf -= Ferror;
+            rb += Berror;
+            lb -= Berror;
+
+            // scale the values so that none is bigger than 1
+            double scale = 1.0;
+            scale = Math.max(scale, Math.abs(rf));
+            scale = Math.max(scale, Math.abs(lf));
+            scale = Math.max(scale, Math.abs(rb));
+            scale = Math.max(scale,Math.abs(lb));
+            if (scale != 1.0) {
+                rf = rf / scale;
+                lf = lf / scale;
+                rb = rb / scale;
+                lb = lb / scale;
+            }
+
+            //rf = Range.clip(rf, -maxspeed, maxspeed);
+            //lf = Range.clip(lf, -maxspeed, maxspeed);
+            //rb = Range.clip(rb, -maxspeed, maxspeed);
+            //lb = Range.clip(lb, -maxspeed, maxspeed);
+
+            robot.RF.setPower(rf);
+            robot.LF.setPower(lf);
+            robot.RB.setPower(rb);
+            robot.LB.setPower(lb);
+            return true;
+        }
+
+        public void stop() {
+            robot.RF.setPower(0);
+            robot.LF.setPower(0);
+            robot.RB.setPower(0);
+            robot.LB.setPower(0);
+        }
+
+        public void all(int afst, float spd, double dir, int orientation) {
+            init(afst, spd, dir, orientation);
+            while (opModeIsActive()) {
+                if (busy() == false)
+                    break;
+            }
+            stop();
+        }
+    }
+
     @Override public void runOpMode() {
 
         robot.init(hardwareMap);
+        telemetry.addData(">", "Busy initializing Vuforia");
+        telemetry.update();
 
         VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters(R.id.cameraMonitorViewId);
         parameters.vuforiaLicenseKey = "AcvR5Sn/////AAAAGQwS8PRgWkyFgpvvz2d3BaMngxk2ZmS2alish2+5HG1YD+3YTzOn/9gMWN5KtthsKuymriEd5CJCV2pS8Caf8IbGhmmiGkGzFkd+BklL11xPvHEVoN5NbPVd6SkJZxRxm78ncJoDQj/YrR8vLX1LqBaHBr4G5xs8fBs7dlbdEhBf+mt0E8Bf7GjKb7VPRgKi3V0aVES65/RsCNc+LEBofLVKx5NI85F/3UsBM8Mg85jqKm7CHDJt0ppyY03RZDyCIYcj68ZR5St5fSGBrvoiij/TG2+UxdW+ZE2+ka/5L6lC1JGNebHQo+H/NZ1hOQfC2J/f+u1CeEBqzmACucoHEIB+XivNfvy5MvxsjFmsR0kI";
@@ -154,11 +302,11 @@ public class ryvision extends LinearOpMode {
 
         waitForStart();
 
-        robot.LF.setPower(-0.2F);
-        robot.RF.setPower(-0.2F);
-        robot.LB.setPower(-0.2F);
-        robot.RB.setPower(-0.2F);
+        mecGR drive = new mecGR();
+        // We need to end up a bit more than a tile away from the target, otherwise it does not fit in the camera view
+        drive.init(1900,0.2F,360-25, 0);
 
+        boolean needToDrive = true;
         while (opModeIsActive()) {
 
             for (VuforiaTrackable trackable : allTrackables) {
@@ -168,21 +316,25 @@ public class ryvision extends LinearOpMode {
                 OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener)trackable.getListener()).getUpdatedRobotLocation();
                 if (robotLocationTransform != null) {
                     lastLocation = robotLocationTransform;
-                    float Xposisie = lastLocation.getTranslation().get(0);
-                    if (Xposisie < (mmFTCFieldWidth/12)-(mmBotWidth/2)) {
-                        robot.LF.setPower(0);
-                        robot.RF.setPower(0);
-                        robot.LB.setPower(0);
-                        robot.RB.setPower(0);
-                    }
+
                 }
             }
 
             if (lastLocation != null) {
 
                 telemetry.addData("Pos", format(lastLocation));
+                float Xposisie = lastLocation.getTranslation().get(0);
+                if (Xposisie < (mmFTCFieldWidth/12) + 60) { // 60mm delay
+                    drive.stop();
+                    needToDrive = false;
+                }
             } else {
                 telemetry.addData("Pos", "Unknown");
+            }
+            if (needToDrive == true && drive.busy() == false) {
+                telemetry.addData(">", "Missed target");
+                drive.stop();
+                break;
             }
             telemetry.update();
         }
