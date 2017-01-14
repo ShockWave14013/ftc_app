@@ -32,14 +32,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.ftccommon.DbgLog;
-import org.firstinspires.ftc.teamcode.helpers.LSM6;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DeviceInterfaceModule;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.util.RobotLog;
+import org.firstinspires.ftc.teamcode.helpers.PID;
 
 /**
  * TeleOp Mode
@@ -50,10 +48,16 @@ import com.qualcomm.robotcore.util.Range;
 //@Disabled
 public class SWTD1 extends OpMode {
 
-    SWHardware robot       = new SWHardware();
+	SWHardware robot = new SWHardware();
+	//PID rotator = new PID(0.001,0.001,0.001,true);
 
 	double where = 0;
-
+	double ptgyro =0;
+	boolean pdpadup = false;
+	boolean pdpaddown = false;
+	double BallLiftServoPos = 0.7;
+	boolean pdpadleft = false;
+	boolean pdpadright = false;
 	/**
 	 * Constructor
 	 */
@@ -81,6 +85,43 @@ public class SWTD1 extends OpMode {
 	@Override
 	public void loop() {
 		//robot.Rot.setPosition((gamepad1.left_trigger-gamepad1.right_trigger)/2.0+0.5);
+		telemetry.addData("GyroT", "gyrot:%f,ptgyro:%f", robot.gyrot.getHeading(),ptgyro-robot.gyrot.getHeading());
+		if (robot.gyrot.getHeading() != ptgyro) {
+			double tpidout = rotator.run(robot.gyrot.getHeading());
+			RobotLog.ii("GyroT", "gyroh:%f, pidout:%f", robot.gyrot.getHeading(), tpidout);
+			telemetry.addData("GyroT", "pidout:%f", tpidout);
+			tpidout = Range.clip(tpidout, -0.5, 0.5);
+			double tspd = (gamepad1.left_trigger - gamepad1.right_trigger) / 2.0;
+			telemetry.addData("GyroT", "tspd:%f, pidout:%f", tspd, tpidout);
+			RobotLog.ii("GyroT", "tspd:%f, pidout:%f", tspd, tpidout);
+			tspd += tpidout;
+			tspd = Range.clip(tspd, -0.5, 0.5);
+			RobotLog.ii("GyroT", "tspd:%f", tspd);
+			if (Double.isNaN(tspd))
+				tspd = 0;
+			robot.Rot.setPosition(tspd + 0.5);
+			ptgyro = robot.gyrot.getHeading();
+		}
+
+		if (gamepad1.dpad_up && !pdpadup){
+			BallLiftServoPos += 0.05;
+		}
+		if (gamepad1.dpad_down && !pdpaddown){
+			BallLiftServoPos -= 0.05;
+		}
+		if (gamepad1.dpad_left && !pdpadleft){
+			BallLiftServoPos = 0.7;
+		}
+		if (gamepad1.dpad_right && !pdpadright){
+			BallLiftServoPos = 0.0;
+		}
+
+		robot.BallLifter.setPosition(Range.clip(BallLiftServoPos, 0.0, 1.0));
+		pdpadup = gamepad1.dpad_up;
+		pdpaddown = gamepad1.dpad_down;
+		pdpadleft = gamepad1.dpad_left;
+		pdpadright = gamepad1.dpad_right;
+		telemetry.addData("BallLifter", "BallLifter:%f",  BallLiftServoPos);
 
         // note that if y equal -1 then joystick is pushed all of the way forward.
         float lefty = -gamepad1.left_stick_y;
@@ -171,8 +212,8 @@ public class SWTD1 extends OpMode {
 		telemetry.addData("right pwr",  "right  pwr: " + String.format("%.2f", righty));
 		telemetry.addData(" right direction", "right direction: " + String.format("%.2f", rightx));
 		telemetry.addData("left tgt pwr","left pwr: " + String.format("%.2f", lefty));
-        telemetry.addData("gyro", "gyroc" + String.format("%.2f", where));
-
+		telemetry.addData("gyro", "gyroc" + String.format("%.2f", where));
+		robot.waitForTick(10);
 		//telemetry.addData("bwrd tgt pwr","backwards pwr: " + String.format("%.2f", backwards));
 	}
 
@@ -183,7 +224,7 @@ public class SWTD1 extends OpMode {
 	 */
 	@Override
 	public void stop() {
-
+		robot.Rot.setPosition(0.5);
 	}
 
 	/*

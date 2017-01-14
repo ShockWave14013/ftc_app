@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DeviceInterfaceModule;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.I2cAddr;
@@ -9,7 +8,6 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.helpers.LSM6;
-import org.firstinspires.ftc.teamcode.helpers.LSM6Impl;
 
 /**
  * This is NOT an opmode.
@@ -35,6 +33,7 @@ public class SWHardware
     public DcMotor  LB = null;
     public DcMotor  RB = null;
     //public Servo    Rot= null;
+    public Servo    BallLifter= null;
     public DeviceInterfaceModule cdim = null;
     LSM6 gyroc, gyrot = null;
     // gyroc = on chasis
@@ -88,11 +87,12 @@ public class SWHardware
 
         //Rot.setPosition(0.5);
 
-
+        BallLifter = hwMap.servo.get("BallLifter");
+        BallLifter.setPosition(0.7);
 
         cdim = hwMap.deviceInterfaceModule.get("dim");
-        gyroc = hwMap.get(LSM6Impl.class,"gyroc");
-        //gyrot =hardwareMap.get(LSM6Impl.class,"gyro2");
+        gyroc = hwMap.get(LSM6.class,"gyroc");
+        //gyrot =hardwareMap.get(LSM6.class,"gyro2");
         //gyrot.setI2cAddr(I2cAddr.create8bit(0xD4));
 
 

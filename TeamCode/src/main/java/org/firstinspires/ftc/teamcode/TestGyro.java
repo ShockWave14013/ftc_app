@@ -37,7 +37,6 @@ import com.qualcomm.robotcore.hardware.DeviceInterfaceModule;
 import com.qualcomm.robotcore.hardware.I2cAddr;
 
 import org.firstinspires.ftc.teamcode.helpers.LSM6;
-import org.firstinspires.ftc.teamcode.helpers.LSM6Impl;
 
 /*
  * This is an example LinearOpMode that shows how to use
@@ -63,9 +62,9 @@ public class TestGyro extends LinearOpMode {
     double where,where2;
 
     cdim = hardwareMap.deviceInterfaceModule.get("dim");
-    //gyro2 = new LSM6Impl(cdim, 1, LSM6Impl.DS33_SA0_LOW_ADDRESS);
-    gyro = hardwareMap.get(LSM6Impl.class,"gyro");
-    gyro2 =hardwareMap.get(LSM6Impl.class,"gyro2");
+    //gyro2 = new LSM6(cdim, 1, LSM6.DS33_SA0_LOW_ADDRESS);
+    gyro = hardwareMap.get(LSM6.class,"gyro");
+    gyro2 =hardwareMap.get(LSM6.class,"gyro2");
     gyro2.setI2cAddr(I2cAddr.create8bit(0xD4));
     // wait for the start button to be pressed.
     waitForStart();
