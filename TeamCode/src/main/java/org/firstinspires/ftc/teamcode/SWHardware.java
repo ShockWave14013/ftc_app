@@ -36,6 +36,12 @@ public class SWHardware
     public Servo    BallLifter= null;
     public DeviceInterfaceModule cdim = null;
     LSM6 gyroc, gyrot = null;
+    public Servo Kicker = null;
+    public DcMotor shootertilt = null;
+    public DcMotor lefts = null;
+    public DcMotor rights = null;
+
+
     // gyroc = on chasis
     //gyrot = on turret
 
@@ -57,6 +63,17 @@ public class SWHardware
         // Save reference to Hardware map
         hwMap = ahwMap;
 
+        lefts = hwMap.dcMotor.get("lefts");
+        rights = hwMap.dcMotor.get("rights");
+        lefts.setDirection(DcMotor.Direction.FORWARD); // Set to REVERSE if using AndyMark motors
+        rights.setDirection(DcMotor.Direction.REVERSE);
+
+        lefts.setPower(0);
+        rights.setPower(0);
+
+        lefts.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rights.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
         // Define and Initialize Motors
         LF = hwMap.dcMotor.get("L F");
         RF = hwMap.dcMotor.get("R F");
@@ -76,19 +93,26 @@ public class SWHardware
         LB.setPower(0);
         RB.setPower(0);
 
-        // Set all motors to run without encoders.
+        // Set all motors to run with encoders.
         // May want to use RUN_USING_ENCODERS if encoders are installed.
         LF.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         LB.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         RF.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         RB.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
+        shootertilt = hwMap.dcMotor.get("Shootertilt");
+        shootertilt.setPower(0);
+        shootertilt.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
         //Rot = hwMap.servo.get("Rotator");
 
         //Rot.setPosition(0.5);
 
         BallLifter = hwMap.servo.get("BallLifter");
-        BallLifter.setPosition(0.7);
+        BallLifter.setPosition(0.72);
+
+        Kicker = hwMap.servo.get("Kicker");
+        Kicker.setPosition(0.43);
 
         cdim = hwMap.deviceInterfaceModule.get("dim");
         gyroc = hwMap.get(LSM6.class,"gyroc");
