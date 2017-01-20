@@ -66,6 +66,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorController;
 import com.qualcomm.robotcore.util.RobotLog;
 
+
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.matrices.MatrixF;
 import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
@@ -80,6 +81,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.firstinspires.ftc.teamcode.helpers.FtcConfig;
 
 @Autonomous(name="Ry met vision", group ="Robot")
 //@Disabled
@@ -214,7 +216,7 @@ public class ryvision extends LinearOpMode {
 
     @Override public void runOpMode() {
 
-        robot.init(hardwareMap);
+        //robot.init(hardwareMap);
         telemetry.addData(">", "Busy initializing Vuforia");
         telemetry.update();
 
@@ -302,7 +304,35 @@ public class ryvision extends LinearOpMode {
         /** Start tracking the data sets we care about. */
         FTC_comp.activate();
 
+        FtcConfig ftcConfig = new FtcConfig();
+        telemetry.addData("-","world");
+        telemetry.update();
+
+        ftcConfig.init(hardwareMap.appContext, this);
+        // waitOneFullHardwareCycle();
+        sleep(50); // temporary fix to waitXXXHardwareCycle bug?
+
+        telemetry.addData("-","hello");
+        telemetry.update();
+        // init_loop type functionality here
+        while (!opModeIsActive() ) {
+            ftcConfig.init_loop(hardwareMap.appContext, this);
+            // waitOneFullHardwareCycle();
+            sleep(50); // temporary fix to waitXXXHardwareCycle bug?
+            telemetry.addData("-","rainbows");
+            telemetry.update();
+        }
+
+        telemetry.addData("-","notOpMode");
+        telemetry.update();
+
         waitForStart();
+
+        telemetry.clearAll();
+        telemetry.addData("A","Running the LinearOpMode now");
+        telemetry.addData("ColorIsRed", Boolean.toString(ftcConfig.param.colorIsRed));
+        telemetry.addData("DelayInSec", Integer.toString(ftcConfig.param.delayInSec));
+        telemetry.addData("AutonType", ftcConfig.param.autonType);
 
         mecGR drive = new mecGR();
         // We need to end up a bit more than a tile away from the target, otherwise it does not fit in the camera view
