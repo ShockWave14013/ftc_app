@@ -55,9 +55,20 @@ public class SWTD1 extends OpMode {
 	double ptgyro =0;
 	boolean pdpadup = false;
 	boolean pdpaddown = false;
-	double BallLiftServoPos = 0.7;
+	double BallLiftServoPos = 0.72;
 	boolean pdpadleft = false;
 	boolean pdpadright = false;
+	boolean kickerbut = false;
+	double kickerservo = 0.43;
+	boolean shup = false;
+	boolean shdown = false;
+	int shootertilt = 0;
+	public boolean buttprevup;
+	public boolean buttnowup;
+	public boolean buttprevdn;
+	public boolean buttnowdn;
+	public float shooterspeed;
+
 	/**
 	 * Constructor
 	 */
@@ -85,7 +96,7 @@ public class SWTD1 extends OpMode {
 	@Override
 	public void loop() {
 		//robot.Rot.setPosition((gamepad1.left_trigger-gamepad1.right_trigger)/2.0+0.5);
-		telemetry.addData("GyroT", "gyrot:%f,ptgyro:%f", robot.gyrot.getHeading(),ptgyro-robot.gyrot.getHeading());
+		/*telemetry.addData("GyroT", "gyrot:%f,ptgyro:%f", robot.gyrot.getHeading(),ptgyro-robot.gyrot.getHeading());
 		if (robot.gyrot.getHeading() != ptgyro) {
 			double tpidout = rotator.run(robot.gyrot.getHeading());
 			RobotLog.ii("GyroT", "gyroh:%f, pidout:%f", robot.gyrot.getHeading(), tpidout);
@@ -102,6 +113,51 @@ public class SWTD1 extends OpMode {
 			robot.Rot.setPosition(tspd + 0.5);
 			ptgyro = robot.gyrot.getHeading();
 		}
+		*/
+
+//		if (gamepad1.x && !kickerbut){
+//			kickerservo = 0.8;
+//			kickerbut = true;
+//		}
+//		if (gamepad1.x && kickerbut == true ){
+//			kickerservo = 0.43;
+//			kickerbut = false;setTargetPosition(Range.clip(shootertilt, 0.0, 1.0));
+//		}
+
+		if (gamepad1.x)
+			kickerservo = 0.8;
+		else
+			kickerservo = 0.43;
+
+		robot.Kicker.setPosition(Range.clip(kickerservo, 0.0, 1.0));
+		telemetry.addData("kicker", "Kicker:%f",  kickerservo);
+		telemetry.addData("kickerbutton", "Kickerbutton:%d",  kickerbut?1:0);
+
+		buttnowup = gamepad1.left_bumper;
+		buttnowdn = gamepad1.right_bumper;
+
+			// Run wheels in tank mode (note: The joystick goes negative when pushed forwards, so negate it)
+
+			// Use gamepad buttons to move thearm up (Y) and down (A)
+
+		if (gamepad1.left_bumper && buttprevup == false && buttnowup == true ) {
+				shooterspeed = 0.2F;
+		} else if (gamepad1.right_bumper && buttnowdn == true && buttprevdn == false)
+			shooterspeed = 0.0F;
+		else {
+
+		}
+
+		robot.lefts.setPower(shooterspeed);
+		robot.rights.setPower(shooterspeed);
+
+		buttprevdn = buttnowdn;
+		buttprevup = buttnowup;
+
+		telemetry.addData("shooterspeed", "%.2f" , shooterspeed );
+
+
+
 
 		if (gamepad1.dpad_up && !pdpadup){
 			BallLiftServoPos += 0.05;
@@ -123,7 +179,22 @@ public class SWTD1 extends OpMode {
 		pdpadright = gamepad1.dpad_right;
 		telemetry.addData("BallLifter", "BallLifter:%f",  BallLiftServoPos);
 
-        // note that if y equal -1 then joystick is pushed all of the way forward.
+		if (gamepad1.y && !shup){
+			shootertilt += 10;
+		}
+		if (gamepad1.a && !shdown){
+			shootertilt -= 10;
+		}
+
+		robot.shootertilt.setPower(0.7F);
+
+		robot.shootertilt.setTargetPosition(shootertilt);
+		shup = gamepad1.y;
+		shdown = gamepad1.a;
+		telemetry.addData("shootertilt", "shootertilt:%d",  shootertilt);
+
+
+		// note that if y equal -1 then joystick is pushed all of the way forward.
         float lefty = -gamepad1.left_stick_y;
         float righty = -gamepad1.right_stick_y;
 		float rightx = -gamepad1.right_stick_x;
@@ -147,7 +218,7 @@ public class SWTD1 extends OpMode {
 		}
 		else if (lefty == 0) {
 			//forward backward and sideways if only rightstick is pressed
-			if (gamepad1.y) {
+			if (gamepad1.b) {
 
 			}
 			else {
@@ -176,7 +247,7 @@ public class SWTD1 extends OpMode {
 		}
 		else{
 			//tank drive if right stick is pressed
-			if (gamepad1.y) {
+			if (gamepad1.b) {
 
 			} else {
 				righty *= 0.39;
@@ -201,7 +272,7 @@ public class SWTD1 extends OpMode {
 
 		/*
 		 * Send telemetry data back to driver station. Note that if we are using
-		 * a legacy NXT-compatible motor controller, then the getPower() method
+		 * a legacy NXT-compatible motor controller, ythen the getPower() method
 		 * will return a null value. The legacy NXT-compatible motor controllers
 		 * are currently write only.
 		 */
@@ -224,7 +295,7 @@ public class SWTD1 extends OpMode {
 	 */
 	@Override
 	public void stop() {
-		robot.Rot.setPosition(0.5);
+		//robot.Rot.setPosition(0.5);
 	}
 
 	/*
