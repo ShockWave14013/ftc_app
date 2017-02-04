@@ -163,7 +163,7 @@ public class ImgProc {
 
         long numImgs = frame.getNumImages();
         for (int i = 0; i < numImgs; i++) {
-            //RobotLog.ii("ImgProc","%d of %d  format %s",i,numImgs,frame.getImage(i).getFormat());
+            RobotLog.ii("ImgProc","%d of %d  format %s",i,numImgs,frame.getImage(i).getFormat());
             if (frame.getImage(i).getFormat() == format) {
                 return frame.getImage(i);
             }//if
