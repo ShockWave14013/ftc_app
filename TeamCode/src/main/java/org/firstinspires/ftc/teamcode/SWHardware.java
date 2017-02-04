@@ -1,13 +1,21 @@
 package org.firstinspires.ftc.teamcode;
 
+import android.os.SystemClock;
+
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DeviceInterfaceModule;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.I2cAddr;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.helpers.LSM6;
+import org.firstinspires.ftc.teamcode.helpers.PID;
+
+import static java.lang.Thread.sleep;
+
 
 /**
  * This is NOT an opmode.
@@ -40,6 +48,7 @@ public class SWHardware
     public DcMotor shootertilt = null;
     public DcMotor lefts = null;
     public DcMotor rights = null;
+    public Servo convservo;
 
 
     // gyroc = on chasis
@@ -52,6 +61,16 @@ public class SWHardware
     /* local OpMode members. */
     HardwareMap hwMap           =  null;
     private ElapsedTime period  = new ElapsedTime();
+    long lastrunTime = 0;
+    int prevleft=0, prevright=0;
+    public int leftavg = 0, rightavg = 0;
+    PID leftpid = new PID(0.00075,0.0001,0,false);
+    PID rightpid = new PID(0.00075,0.0001,0,false);
+    double targetspd = 700.0;
+    public float stvpow = 0.7F;
+    public int stvpos = -100;
+    //public float leftspow =
+
 
     /* Constructor */
     public SWHardware(){
@@ -65,8 +84,8 @@ public class SWHardware
 
         lefts = hwMap.dcMotor.get("lefts");
         rights = hwMap.dcMotor.get("rights");
-        lefts.setDirection(DcMotor.Direction.FORWARD); // Set to REVERSE if using AndyMark motors
-        rights.setDirection(DcMotor.Direction.REVERSE);
+        lefts.setDirection(DcMotor.Direction.REVERSE); // Set to REVERSE if using AndyMark motors
+        rights.setDirection(DcMotor.Direction.FORWARD);
 
         lefts.setPower(0);
         rights.setPower(0);
@@ -114,6 +133,9 @@ public class SWHardware
         Kicker = hwMap.servo.get("Kicker");
         Kicker.setPosition(0.43);
 
+        convservo = hwMap.servo.get("Convservo");
+        convservo.setPosition(0.505F);
+
         cdim = hwMap.deviceInterfaceModule.get("dim");
         gyroc = hwMap.get(LSM6.class,"gyroc");
         //gyrot =hardwareMap.get(LSM6.class,"gyro2");
@@ -123,8 +145,45 @@ public class SWHardware
         // Define and initialize ALL installed servos.
     }
 
-    /***
-     *
+    public void initShooter(double spd){
+        lastrunTime = SystemClock.elapsedRealtime();
+        prevleft = lefts.getCurrentPosition();
+        prevright = rights.getCurrentPosition();
+        targetspd = spd;
+        leftpid = new PID(0.00075,0.0003,0,false);
+        rightpid = new PID(0.00075,0.0003,0,false);
+    }
+
+    public double runShooter(){
+        double dt = (SystemClock.elapsedRealtime() - lastrunTime)/1000.0;
+        lastrunTime = SystemClock.elapsedRealtime();
+
+        int leftdiff = lefts.getCurrentPosition()-prevleft;
+        int rightdiff = rights.getCurrentPosition()-prevright;
+        prevleft = lefts.getCurrentPosition();
+        prevright = rights.getCurrentPosition();
+        leftavg -= leftavg >> 3;
+        leftavg += leftdiff;
+        rightavg -= rightavg >> 3;
+        rightavg += rightdiff;
+
+        double leftspd = (leftavg >> 3) / dt;
+        double rightspd = (rightavg >> 3) / dt;
+        double leftpow = leftpid.run(targetspd - leftspd);
+        double rightpow = rightpid.run(targetspd - rightspd);
+        leftpow = Range.clip(leftpow, 0.01, 0.4);
+        rightpow = Range.clip(rightpow, 0.01, 0.4);
+
+        lefts.setPower(leftpow);
+        rights.setPower(rightpow);
+        return (leftspd+rightspd)/2;
+    }
+
+    public void stopShooter(){
+        lefts.setPower(0.0F);
+        rights.setPower(0.0F);
+    }
+    /*
      * waitForTick implements a periodic delay. However, this acts like a metronome with a regular
      * periodic tick.  This is used to compensate for varying processing times for each cycle.
      * The function looks at the elapsed cycle time, and sleeps for the remaining time interval.
@@ -138,7 +197,7 @@ public class SWHardware
         // sleep for the remaining portion of the regular cycle period.
         if (remaining > 0) {
             try {
-                Thread.sleep(remaining);
+                sleep(remaining);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
