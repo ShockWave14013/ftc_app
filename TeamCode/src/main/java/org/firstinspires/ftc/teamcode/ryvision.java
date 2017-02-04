@@ -36,6 +36,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * Strategy: XXX
  * - Option 1: XXX
  * - - Drive to first beacon and press the correct button
+ * - - - Quickly drive to close to the beacon.
+ * - - Drive to second beacon and press the correct button
  * - - Finished
  * - Option 2: XXX
  * - - Shoot particles into centre vortex
@@ -57,6 +59,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package org.firstinspires.ftc.teamcode;
 
+import android.util.Log;
+
 import com.qualcomm.ftccommon.DbgLog;
 import com.qualcomm.ftcrobotcontroller.R;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
@@ -65,6 +69,8 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 //import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.hardware.DcMotorController;
 import com.qualcomm.robotcore.util.RobotLog;
+import com.vuforia.PIXEL_FORMAT;
+import com.vuforia.Vuforia;
 
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
@@ -82,6 +88,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
 import java.util.ArrayList;
 import java.util.List;
 import org.firstinspires.ftc.teamcode.helpers.FtcConfig;
+import org.firstinspires.ftc.teamcode.helpers.ImgProc;
+import org.firstinspires.ftc.teamcode.helpers.VortexUtils;
 
 @Autonomous(name="Ry met vision", group ="Robot")
 //@Disabled
@@ -98,6 +106,8 @@ public class ryvision extends LinearOpMode {
     SWHardware robot = new SWHardware();
 
     VuforiaLocalizer vuforia;
+
+    VuforiaTrackableDefaultListener first_beacon_listener = null;
 
 
     class mecGR {
@@ -216,7 +226,9 @@ public class ryvision extends LinearOpMode {
 
     @Override public void runOpMode() {
 
-        //robot.init(hardwareMap);
+
+
+        robot.init(hardwareMap);
         telemetry.addData(">", "Busy initializing Vuforia");
         telemetry.update();
 
@@ -224,6 +236,8 @@ public class ryvision extends LinearOpMode {
         parameters.vuforiaLicenseKey = "AcvR5Sn/////AAAAGQwS8PRgWkyFgpvvz2d3BaMngxk2ZmS2alish2+5HG1YD+3YTzOn/9gMWN5KtthsKuymriEd5CJCV2pS8Caf8IbGhmmiGkGzFkd+BklL11xPvHEVoN5NbPVd6SkJZxRxm78ncJoDQj/YrR8vLX1LqBaHBr4G5xs8fBs7dlbdEhBf+mt0E8Bf7GjKb7VPRgKi3V0aVES65/RsCNc+LEBofLVKx5NI85F/3UsBM8Mg85jqKm7CHDJt0ppyY03RZDyCIYcj68ZR5St5fSGBrvoiij/TG2+UxdW+ZE2+ka/5L6lC1JGNebHQo+H/NZ1hOQfC2J/f+u1CeEBqzmACucoHEIB+XivNfvy5MvxsjFmsR0kI";
         parameters.cameraDirection = VuforiaLocalizer.CameraDirection.BACK;
         this.vuforia = ClassFactory.createVuforiaLocalizer(parameters);
+        Vuforia.setFrameFormat(PIXEL_FORMAT.RGB565, true);
+        vuforia.setFrameQueueCapacity(1);
 
         VuforiaTrackables FTC_comp = this.vuforia.loadTrackablesFromAsset("FTC_2016-17");
         VuforiaTrackable redTools = FTC_comp.get(1);
@@ -328,6 +342,8 @@ public class ryvision extends LinearOpMode {
 
         waitForStart();
 
+        first_beacon_listener = (VuforiaTrackableDefaultListener) blueWheels.getListener();
+
         telemetry.clearAll();
         telemetry.addData("A","Running the LinearOpMode now");
         telemetry.addData("ColorIsRed", Boolean.toString(ftcConfig.param.colorIsRed));
@@ -336,7 +352,7 @@ public class ryvision extends LinearOpMode {
 
         mecGR drive = new mecGR();
         // We need to end up a bit more than a tile away from the target, otherwise it does not fit in the camera view
-        drive.init(1900,0.2F,360-25, 0);
+        drive.init(1900,0.2F,360-25-90, 0);
         boolean needToDrive = true;
         while (opModeIsActive()) {
 
@@ -358,6 +374,7 @@ public class ryvision extends LinearOpMode {
                 if (Xposisie < (mmFTCFieldWidth/12) + 60) { // 60mm delay
                     drive.stop();
                     needToDrive = false;
+                    break;
                 }
             } else {
                 telemetry.addData("Pos", "Unknown");
@@ -369,6 +386,25 @@ public class ryvision extends LinearOpMode {
             }
             telemetry.update();
         }
+       drive.all(230, 0.3F, 180, 0);
+        int config = VortexUtils.NOT_VISIBLE;
+        try {
+            //telemetry.addData("-", "trying");
+            //telemetry.update();
+            DbgLog.msg("calling wait for");
+            config = VortexUtils.getBeaconConfig(
+                    ImgProc.getImageFromFrame(vuforia.getFrameQueue().take(), PIXEL_FORMAT.RGB565),
+                    first_beacon_listener, vuforia.getCameraCalibration());
+            telemetry.addData("Beacon", config);
+            telemetry.update();
+            Log.i(TAG, "runOp: " + config);
+        } catch (Exception e) {
+            telemetry.addData("Beacon", "could not not be found");
+        }
+        telemetry.update();
+        sleep(5000);
+        DbgLog.msg("After sleep 5000");
+        sleep(5000);
     }
 
     String format(OpenGLMatrix transformationMatrix) {
