@@ -107,7 +107,7 @@ public class VortexUtils {
         int leftp, rightp;
 
         OpenGLMatrix pose = beacon.getRawPose();
-        DbgLog.msg("get raw pose"+img);
+        DbgLog.msg("get raw pose"+pose);
 
         if (pose != null && img != null && img.getPixels() != null) {
             DbgLog.msg("inside if");

@@ -91,6 +91,9 @@ import org.firstinspires.ftc.teamcode.helpers.FtcConfig;
 import org.firstinspires.ftc.teamcode.helpers.ImgProc;
 import org.firstinspires.ftc.teamcode.helpers.VortexUtils;
 
+import static org.firstinspires.ftc.teamcode.helpers.VortexUtils.BEACON_BLUE_RED;
+import static org.firstinspires.ftc.teamcode.helpers.VortexUtils.BEACON_RED_BLUE;
+
 @Autonomous(name="Ry met vision", group ="Robot")
 //@Disabled
 public class ryvision extends LinearOpMode {
@@ -108,6 +111,8 @@ public class ryvision extends LinearOpMode {
     VuforiaLocalizer vuforia;
 
     VuforiaTrackableDefaultListener first_beacon_listener = null;
+
+    float Perfectplace1 = 1500;
 
 
     class mecGR {
@@ -226,7 +231,8 @@ public class ryvision extends LinearOpMode {
 
     @Override public void runOpMode() {
 
-
+        float Xposisie, Yposisie;
+        float helling;
 
         robot.init(hardwareMap);
         telemetry.addData(">", "Busy initializing Vuforia");
@@ -352,7 +358,8 @@ public class ryvision extends LinearOpMode {
 
         mecGR drive = new mecGR();
         // We need to end up a bit more than a tile away from the target, otherwise it does not fit in the camera view
-        drive.init(1900,0.2F,360-25-90, 0);
+        drive.all(1000,0.2F, 270,0);
+        drive.init(900,0.1F,270, 0);
         boolean needToDrive = true;
         while (opModeIsActive()) {
 
@@ -370,8 +377,8 @@ public class ryvision extends LinearOpMode {
             if (lastLocation != null) {
 
                 telemetry.addData("Pos", format(lastLocation));
-                float Xposisie = lastLocation.getTranslation().get(0);
-                if (Xposisie < (mmFTCFieldWidth/12) + 60) { // 60mm delay
+                Xposisie = lastLocation.getTranslation().get(0);
+                if (Xposisie < (mmFTCFieldWidth/12) + 10) { // 60mm delay
                     drive.stop();
                     needToDrive = false;
                     break;
@@ -386,8 +393,15 @@ public class ryvision extends LinearOpMode {
             }
             telemetry.update();
         }
-       drive.all(230, 0.3F, 180, 0);
+        Yposisie = lastLocation.getTranslation().get(1);
+        telemetry.addData("Yposisie: %.2f", Yposisie);
+        helling = Yposisie - 340;
+        Perfectplace1 = Perfectplace1 - helling;
+
+       drive.all(Math.round(Perfectplace1), 0.2F, 180, 0);
         int config = VortexUtils.NOT_VISIBLE;
+        sleep(2000);
+
         try {
             //telemetry.addData("-", "trying");
             //telemetry.update();
@@ -402,9 +416,19 @@ public class ryvision extends LinearOpMode {
             telemetry.addData("Beacon", "could not not be found");
         }
         telemetry.update();
-        sleep(5000);
+        sleep(2000);
+
+        drive.all(190,0.1F, 180,0);
+        if (config == 2){
+            drive.all(10,0.1F,180,20);
+        }
+
+        if (config == 1){
+            drive.all(10,0.1F, 180,-20);
+        }
+
         DbgLog.msg("After sleep 5000");
-        sleep(5000);
+        sleep(10000);
     }
 
     String format(OpenGLMatrix transformationMatrix) {

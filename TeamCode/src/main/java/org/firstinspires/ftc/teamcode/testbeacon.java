@@ -209,7 +209,7 @@ public class testbeacon extends LinearOpMode {
 //            robot.LF.setPower(0);
 //            robot.RB.setPower(0);
 //            robot.LB.setPower(0);
-//        }
+//        }img
 //
 //        public void all(int afst, float spd, double dir, int orientation) {
 //            init(afst, spd, dir, orientation);
@@ -367,7 +367,7 @@ public class testbeacon extends LinearOpMode {
             first_beacon_dir = 0;
             first_beacon_power = 0.2F;
 
-            first_beacon_listener = (VuforiaTrackableDefaultListener) redTools.getListener();
+            first_beacon_listener = (VuforiaTrackableDefaultListener) blueWheels.getListener();
         }
 
         //mecGR drive = new mecGR();
