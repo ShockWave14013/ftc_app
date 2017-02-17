@@ -418,7 +418,7 @@ public class ryvision extends LinearOpMode {
         telemetry.update();
         sleep(2000);
 
-        drive.all(190,0.1F, 180,0);
+        drive.all(195,0.1F, 180,0);
         if (config == 2){
             drive.all(10,0.1F,180,20);
         }

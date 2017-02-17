@@ -18,9 +18,13 @@ public class FtcConfig {
     TEST_GAMEPAD2,
     COLOR,
     DELAY,
+    PERFECTPLACE_ADJUST,
+    AJUSTSPEED1STDRIVE,
+    BEACONSIDE_ADJUST,
     //AUTON_TYPE,
     READY;
-    private static ConfigStep[] vals = values();
+    private static ConfigStep[] vals;
+            //telemetry.update();= values();
     public ConfigStep next() { return vals[(this.ordinal()+1) % vals.length];}
     public ConfigStep prev() { return vals[(this.ordinal()-1+vals.length) % vals.length];}
   }
@@ -29,6 +33,9 @@ public class FtcConfig {
     public boolean colorIsRed;
     public int delayInSec;
     public AutonType autonType;
+    public int PPA;
+    public int AS1D;
+    public int SideAdjust;
   }
 
   public enum AutonType {
@@ -70,6 +77,9 @@ public class FtcConfig {
 
         param.colorIsRed = Boolean.valueOf(bufferedReader.readLine());
         param.delayInSec = Integer.valueOf(bufferedReader.readLine());
+        param.AS1D = Integer.valueOf(bufferedReader.readLine());
+        param.PPA = Integer.valueOf(bufferedReader.readLine());
+        param.SideAdjust = Integer.valueOf(bufferedReader.readLine());
         String autonTypeString = bufferedReader.readLine();
         for (AutonType a : AutonType.values()) {
           if (a.name().equals(autonTypeString)) {
@@ -85,7 +95,10 @@ public class FtcConfig {
       // can't read from file, so initialize to reasonable values
       param.colorIsRed=true;
       param.delayInSec=0;
-      param.autonType= AutonType.GO_FOR_BEACON;
+      param.AS1D = 20;
+      param.PPA = 1500;
+      param.SideAdjust = 1800;
+      //param.autonType= AutonType.GO_FOR_BEACON;
     }
 
     // setup initial toggle memory states for buttons used
@@ -176,6 +189,63 @@ public class FtcConfig {
       }
     }
 
+    currConfigStepCheck = ConfigStep.PERFECTPLACE_ADJUST;
+    // message to driver about state of this config parameter
+    if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
+      opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Perfect Place: " + param.PPA + " mm");
+    }
+    // configure this parameter
+    if (configStepState == currConfigStepCheck) {
+      opMode.telemetry.addData("C" + configStepState.ordinal() + "A", "Push Y for +, A for -");
+      if (y1 && !lastY1) {
+        param.PPA++;
+      }
+      if (a1 && !lastA1) {
+        param.PPA--;
+        if (param.PPA < 0) {
+          param.PPA = 0;
+        }
+      }
+    }
+
+    currConfigStepCheck = ConfigStep.BEACONSIDE_ADJUST;
+    // message to driver about state of this config parameter
+    if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
+      opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Side of beacon adjust: " + param.SideAdjust + " mm");
+    }
+    // configure this parameter
+    if (configStepState == currConfigStepCheck) {
+      opMode.telemetry.addData("C" + configStepState.ordinal() + "A", "Push Y for +, A for -");
+      if (y1 && !lastY1) {
+        param.SideAdjust++;
+      }
+      if (a1 && !lastA1) {
+        param.SideAdjust--;
+        if (param.SideAdjust < 0) {
+          param.SideAdjust = 0;
+        }
+      }
+    }
+
+    currConfigStepCheck = ConfigStep.AJUSTSPEED1STDRIVE;
+    // message to driver about state of this config parameter
+    if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
+      opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Adjusts 1st drive speed: " + param.AS1D + " mm");
+    }
+    // configure this parameter
+    if (configStepState == currConfigStepCheck) {
+      opMode.telemetry.addData("C" + configStepState.ordinal() + "A", "Push Y for +, A for -");
+      if (y1 && !lastY1) {
+        param.AS1D++;
+      }
+      if (a1 && !lastA1) {
+        param.AS1D--;
+        if (param.AS1D < 0) {
+          param.AS1D = 0;
+        }
+      }
+    }
+
     //currConfigStepCheck = ConfigStep.AUTON_TYPE;
     // message to driver about state of this config parameter
 //    if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
@@ -204,7 +274,10 @@ public class FtcConfig {
         // write each configuration parameter as a string on its own line
         outputStreamWriter.write(Boolean.toString(param.colorIsRed)+"\n");
         outputStreamWriter.write(Integer.toString(param.delayInSec)+"\n");
-        outputStreamWriter.write(param.autonType.name()+"\n");
+        outputStreamWriter.write(Integer.toString(param.AS1D)+"\n");
+        outputStreamWriter.write(Integer.toString(param.PPA)+"\n");
+        outputStreamWriter.write(Integer.toString(param.SideAdjust)+"\n");
+        //outputStreamWriter.write(param.autonType.name()+"\n");
 
         outputStreamWriter.close();
       }

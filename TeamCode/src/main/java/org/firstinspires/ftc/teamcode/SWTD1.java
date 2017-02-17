@@ -70,6 +70,9 @@ public class SWTD1 extends OpMode {
 	public float shooterspeed;
 	public boolean conva;
 	public float convservo;
+	public float SSValue = 675.0F;
+	public boolean LTPresed = false;
+	public boolean RTPessed = false;
 
 	/**
 	 * Constructor
@@ -159,19 +162,38 @@ public class SWTD1 extends OpMode {
 		buttnowup = -gamepad2.right_stick_y;
 		buttnowdn = gamepad2.right_stick_y;
 
+
 			// Run wheels in tank mode (note: The joystick goes negative when pushed forwards, so negate it)
 
 			// Use gamepad buttons to move thearm up (Y) and down (A)
 
 		if (-gamepad2.right_stick_y != 0 && buttprevup == 0 && buttnowup >= 0 ) {
 				//shooterspeed = 0.2F;
-			robot.initShooter(675.0F);
+			robot.initShooter(SSValue);
 		} else if (gamepad2.right_stick_y != 0 && buttnowdn >= 0 && buttprevdn == 0)
 			//shooterspeed = 0.0F;
 			robot.initShooter(0.0F);
 		else {
 
 		}
+
+		LTPresed = gamepad2.left_bumper;
+		RTPessed = gamepad2.right_bumper;
+
+		if (gamepad2.left_bumper == true && LTPresed == false){
+			SSValue -= 10F;
+			LTPresed = true;
+			robot.initShooter(SSValue);
+		}
+
+		if (gamepad2.right_bumper == true && RTPessed == false ){
+			SSValue += 10F;
+			RTPessed = true;
+			robot.initShooter(SSValue);
+		}
+
+		telemetry.addData("Shooter Value: %d", SSValue);
+		telemetry.update();
 
 //		robot.lefts.setPower(shooterspeed);
 //		robot.rights.setPower(shooterspeed);
