@@ -68,6 +68,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 //import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.hardware.DcMotorController;
+import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.util.RobotLog;
 import com.vuforia.PIXEL_FORMAT;
 import com.vuforia.Vuforia;
@@ -112,19 +113,22 @@ public class ryvision extends LinearOpMode {
 
     VuforiaTrackableDefaultListener first_beacon_listener = null;
 
-    float Perfectplace1 = 1500;
+    float Perfectplace = 1500;
 
 
     class mecGR {
         double yspd, xspd; // x and y componets of speed
         double where; // Orientation of robot at the start of a move, fi. mecGR()
+        double finorient; // Final orientation
         double ticsF, ticsB; // ticks needed for Front and Back wheels
 
         // dir is looking down at robot, x axis going through its sides and y axis through its
         // front and back. 0 is on the x axis to the right and moving CCW.
         public void init(int afst, float spd, double dir, int orientation) {
             spd = Math.abs(spd);
-            where = robot.gyroc.getHeading() + orientation;
+            //where = robot.gyroc.getHeading() + orientation;
+            where = robot.gyroc.getHeading();
+            finorient = orientation;
 
             robot.RF.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
             robot.LF.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -152,22 +156,26 @@ public class ryvision extends LinearOpMode {
             double rf, lf, rb, lb;
             double Ferror; // Front error correction
             double Berror; // Back error correction. Different because of weight distribution
-
+            double currorient = 0.0; // Orientation to aim for now
             if (Math.abs(ticsF) > Math.abs(ticsB)) {
-                    if ((Math.abs(robot.RF.getCurrentPosition()) > Math.abs(ticsF))) {
-                        DbgLog.msg("Using RF");
-                        return false;
-                    }
-                } else {
-                    if (Math.abs(robot.RB.getCurrentPosition()) > Math.abs(ticsB)) {
-                        DbgLog.msg("Using RB");
-                        return false;
-                    }
+                currorient =  finorient * 1.2 * Math.abs(robot.RF.getCurrentPosition()) / Math.abs(ticsF);
+
+                if ((Math.abs(robot.RF.getCurrentPosition()) > Math.abs(ticsF))) {
+                    DbgLog.msg("Using RF");
+                    return false;
                 }
+            } else {
+                currorient =  finorient * 1.2 * Math.abs(robot.RB.getCurrentPosition()) / Math.abs(ticsB);
+                if (Math.abs(robot.RB.getCurrentPosition()) > Math.abs(ticsB)) {
+                    DbgLog.msg("Using RB");
+                    return false;
+                }
+            }
+            currorient = Range.clip(currorient, -Math.abs(finorient), Math.abs(finorient));
 
             // XXX Weight compensation 200 ... 100?
-            Ferror = ((where - robot.gyroc.getHeading()) / 100); // 200
-            Berror = ((where - robot.gyroc.getHeading()) / 100);
+            Ferror = currorient + ((where - robot.gyroc.getHeading()) / 100); // 200
+            Berror = currorient + ((where - robot.gyroc.getHeading()) / 100);
 
             DbgLog.msg("xspd:%.3f,yspd:%.3f,ticsF:%.3f,ticsB:%.3f,RB.pos:%d,RF.pos:%d", xspd, yspd, ticsF, ticsB,
                     robot.RB.getCurrentPosition(), robot.RF.getCurrentPosition());
@@ -226,6 +234,33 @@ public class ryvision extends LinearOpMode {
                     break;
             }
             stop();
+        }
+
+        public void turn(float spd, int degrees){
+            where = robot.gyroc.getHeading() + degrees;
+
+            double rf=0, lf=0, rb=0, lb=0;
+
+            double Ferror; // Front error correction
+            double Berror; // Back error correction. Different because of weight distribution
+
+            while(opModeIsActive() && Math.abs(where - robot.gyroc.getHeading()) > 3 ) {
+                Ferror = ((where - robot.gyroc.getHeading()) / 100); // 200
+                Berror = ((where - robot.gyroc.getHeading()) / 100);
+
+                rf += Ferror * spd;
+                lf -= Ferror * spd;
+                rb += Berror * spd;
+                lb -= Berror * spd;
+
+                robot.RF.setPower(rf);
+                robot.LF.setPower(lf);
+                robot.RB.setPower(rb);
+                robot.LB.setPower(lb);
+            }
+
+            stop();
+
         }
     }
 
@@ -357,12 +392,13 @@ public class ryvision extends LinearOpMode {
         telemetry.addData("AutonType", ftcConfig.param.autonType);
 
         mecGR drive = new mecGR();
+        //drive.turn(0.1F,10);
+        //sleep(30000);
         // We need to end up a bit more than a tile away from the target, otherwise it does not fit in the camera view
         drive.all(1000,0.2F, 270,0);
         drive.init(900,0.1F,270, 0);
         boolean needToDrive = true;
         while (opModeIsActive()) {
-
             for (VuforiaTrackable trackable : allTrackables) {
 
                 telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
@@ -378,7 +414,145 @@ public class ryvision extends LinearOpMode {
 
                 telemetry.addData("Pos", format(lastLocation));
                 Xposisie = lastLocation.getTranslation().get(0);
-                if (Xposisie < (mmFTCFieldWidth/12) + 10) { // 60mm delay
+                if (Xposisie < (mmFTCFieldWidth/12) + 55) { // 60mm delay
+                    drive.stop();
+                    needToDrive = false;
+                    break;
+                }
+            } else {
+                telemetry.addData("Pos", "Unknown");
+            }
+            if (needToDrive == true && drive.busy() == false) {
+                telemetry.addData(">", "Missed target");
+                drive.stop();
+                break;
+            }
+            telemetry.update();
+        }
+        // Compensate if we did overshoot a little
+        Xposisie = lastLocation.getTranslation().get(0);
+        if(Xposisie < (mmFTCFieldWidth/12) - 55){
+            drive.all(Math.round((mmFTCFieldWidth/12) - Xposisie ) + 55, 0.1F,90, 0);
+        }
+        // We should now be alligned with the target.
+        // Get distance to where the robot can determine the beacon colour / orientation
+        Yposisie = lastLocation.getTranslation().get(1);
+        telemetry.addData("Yposisie: %.2f", Yposisie);
+        helling = Yposisie - 340;
+        float Perfectplace1 = Perfectplace - helling;
+
+        drive.all(Math.round(Perfectplace1), 0.2F, 180, 0);
+        for (VuforiaTrackable trackable : allTrackables) {
+
+            telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
+
+            OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener)trackable.getListener()).getUpdatedRobotLocation();
+            if (robotLocationTransform != null) {
+                lastLocation = robotLocationTransform;
+
+            }
+        }
+        Yposisie = lastLocation.getTranslation().get(1);
+        telemetry.addData("Yposisie nuut",Yposisie);
+        int config = VortexUtils.NOT_VISIBLE;
+        sleep(2000); // XXX how long is really needed
+
+        try {
+            //telemetry.addData("-", "trying");
+            //telemetry.update();
+            DbgLog.msg("calling wait for");
+            config = VortexUtils.getBeaconConfig(
+                    ImgProc.getImageFromFrame(vuforia.getFrameQueue().take(), PIXEL_FORMAT.RGB565),
+                    first_beacon_listener, vuforia.getCameraCalibration());
+            telemetry.addData("Beacon", config);
+            telemetry.update();
+            Log.i(TAG, "runOp: " + config);
+        } catch (Exception e) {
+            telemetry.addData("Beacon", "could not not be found");
+        }
+        telemetry.update();
+        //sleep(2000);
+
+        //verskillende opsies vir die beacon
+        drive.all(190,0.1F, 180,0);
+        double GyroB = robot.gyroc.getHeading();
+        double GyroE;
+        if (config == 2){
+            //drive.all(20,0.1F,180,20);
+            drive.turn(0.07F,10);
+            drive.all(30,0.1F,180, 0);
+            sleep(750);
+            //GyroE = robot.gyroc.getHeading();
+            //telemetry.addData("Gyrowaarde", GyroE - GyroB);
+            telemetry.addData("Config2", "1stturn  + sleep finish");
+            telemetry.update();
+
+            drive.all(50,0.1F,0,0);
+            //drive.all(20,0.1F,180, -20);
+        }
+
+        if (config == 1){
+            //drive.all(70,0.1F, 180,-10);
+            drive.turn(0.07F,-10);
+            drive.all(30,0.1F,180, 0);
+            sleep(750);
+            //GyroE = robot.gyroc.getHeading();
+            //telemetry.addData("Gyrowaarde", GyroE - GyroB);
+            telemetry.addData("Config1", "1stturn  + sleep finish");
+            telemetry.update();
+            drive.all(50, 0.1F, 0,0);
+            //drive.all(20,0.1F,180, 20);
+        }
+        sleep(750);
+        GyroE = robot.gyroc.getHeading();
+
+        drive.turn(0.1F, (int)Math.round(GyroB - GyroE));
+
+//        DbgLog.msg("After sleep 5000")
+
+        //agteruit ry
+        drive.all(700,0.1F,0, 0);
+        sleep(1000);
+        for (VuforiaTrackable trackable : allTrackables) {
+
+            telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
+
+            OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener)trackable.getListener()).getUpdatedRobotLocation();
+            if (robotLocationTransform != null) {
+                lastLocation = robotLocationTransform;
+
+            }
+        }
+
+        float zangle = Orientation.getOrientation(lastLocation,AxesReference.EXTRINSIC, AxesOrder.XYZ,AngleUnit.DEGREES).thirdAngle;
+        DbgLog.msg("Z Angle: %f" , zangle);
+
+        drive.turn(0.1F, Math.round(zangle) * -1);
+
+        sleep(1000);
+
+        drive.all(1100,0.2F,270,0);
+        first_beacon_listener = (VuforiaTrackableDefaultListener) blueLegos.getListener();
+        sleep(1000);
+        drive.init(230,0.1F,270, 0);
+        needToDrive = true;
+        while (opModeIsActive()) {
+            for (VuforiaTrackable trackable : allTrackables) {
+
+                telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
+
+                OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener)trackable.getListener()).getUpdatedRobotLocation();
+                if (robotLocationTransform != null) {
+                    lastLocation = robotLocationTransform;
+
+                }
+            }
+
+            if (lastLocation != null) {
+
+                telemetry.addData("Pos", format(lastLocation));
+                Xposisie = lastLocation.getTranslation().get(0);
+                if (Xposisie < (mmFTCFieldWidth/12*-3) + 25) { // 60mm delay
                     drive.stop();
                     needToDrive = false;
                     break;
@@ -396,11 +570,24 @@ public class ryvision extends LinearOpMode {
         Yposisie = lastLocation.getTranslation().get(1);
         telemetry.addData("Yposisie: %.2f", Yposisie);
         helling = Yposisie - 340;
-        Perfectplace1 = Perfectplace1 - helling;
+        float Perfectplace2 = Perfectplace - helling;
 
-       drive.all(Math.round(Perfectplace1), 0.2F, 180, 0);
-        int config = VortexUtils.NOT_VISIBLE;
-        sleep(2000);
+        drive.all(Math.round(Perfectplace2), 0.2F, 180, 0);
+        sleep(5000);
+        for (VuforiaTrackable trackable : allTrackables) {
+
+            telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
+
+            OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener)trackable.getListener()).getUpdatedRobotLocation();
+            if (robotLocationTransform != null) {
+                lastLocation = robotLocationTransform;
+
+            }
+        }
+        Yposisie = lastLocation.getTranslation().get(1);
+        telemetry.addData("Yposisie nuut",Yposisie);
+        config = VortexUtils.NOT_VISIBLE;
+        sleep(2000); // XXX how long is really needed
 
         try {
             //telemetry.addData("-", "trying");
@@ -416,19 +603,43 @@ public class ryvision extends LinearOpMode {
             telemetry.addData("Beacon", "could not not be found");
         }
         telemetry.update();
-        sleep(2000);
+        //sleep(2000);
 
-        drive.all(195,0.1F, 180,0);
+        //verskillende opsies vir die beacon
+        drive.all(175,0.1F, 180,0);
+        GyroB = robot.gyroc.getHeading();
         if (config == 2){
-            drive.all(10,0.1F,180,20);
+            //drive.all(20,0.1F,180,20);
+            drive.turn(0.07F,10);
+            drive.all(30,0.1F,180, 0);
+            sleep(750);
+            //GyroE = robot.gyroc.getHeading();
+            //telemetry.addData("Gyrowaarde", GyroE - GyroB);
+            telemetry.addData("Config2", "1stturn  + sleep finish");
+            telemetry.update();
+
+            drive.all(50,0.1F,0,0);
+            //drive.all(20,0.1F,180, -20);
         }
 
         if (config == 1){
-            drive.all(10,0.1F, 180,-20);
+            //drive.all(70,0.1F, 180,-10);
+            drive.turn(0.07F,-10);
+            drive.all(30,0.1F,180, 0);
+            sleep(750);
+            //GyroE = robot.gyroc.getHeading();
+            //telemetry.addData("Gyrowaarde", GyroE - GyroB);
+            telemetry.addData("Config1", "1stturn  + sleep finish");
+            telemetry.update();
+            drive.all(50, 0.1F, 0,0);
+            //drive.all(20,0.1F,180, 20);
         }
+        // Compensate if we did overshoot a little
+//        Xposisie = lastLocation.getTranslation().get(0);
+//        if(Xposisie < (mmFTCFieldWidth/12) - 60){
+//            drive.all(Math.round((mmFTCFieldWidth/12) - Xposisie ) + 60, 0.1F,90, 0);
+//        }
 
-        DbgLog.msg("After sleep 5000");
-        sleep(10000);
     }
 
     String format(OpenGLMatrix transformationMatrix) {
