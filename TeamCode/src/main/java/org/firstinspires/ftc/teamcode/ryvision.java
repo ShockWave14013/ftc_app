@@ -387,288 +387,580 @@ public class ryvision extends LinearOpMode {
         waitForStart();
 
 
-        //if ()
+        if (ftcConfig.param.colorIsRed ==false) {
 
-        first_beacon_listener = (VuforiaTrackableDefaultListener) blueWheels.getListener();
+            first_beacon_listener = (VuforiaTrackableDefaultListener) blueWheels.getListener();
 
-        telemetry.clearAll();
-        telemetry.addData("A","Running the LinearOpMode now");
-        telemetry.addData("ColorIsRed", Boolean.toString(ftcConfig.param.colorIsRed));
-        telemetry.addData("DelayInSec", Integer.toString(ftcConfig.param.delayInSec));
-        telemetry.addData("AutonType", ftcConfig.param.autonType);
+            telemetry.clearAll();
+            telemetry.addData("A", "Running the LinearOpMode now");
+            telemetry.addData("ColorIsRed", Boolean.toString(ftcConfig.param.colorIsRed));
+            telemetry.addData("DelayInSec", Integer.toString(ftcConfig.param.delayInSec));
+            telemetry.addData("AutonType", ftcConfig.param.autonType);
 
-        mecGR drive = new mecGR();
-        //drive.turn(0.1F,10);
-        //sleep(30000);
-        // We need to end up a bit more than a tile away from the target, otherwise it does not fit in the camera view
-        drive.all(950,0.6F, 270,0); //1000
-        drive.init(950,0.1F,270, 0); //900
-        boolean needToDrive = true;
-        while (opModeIsActive()) {
+            mecGR drive = new mecGR();
+            //drive.turn(0.1F,10);
+            //sleep(30000);
+            // We need to end up a bit more than a tile away from the target, otherwise it does not fit in the camera view
+            drive.all(950, 0.6F, 270, 0); //1000
+            drive.init(950, 0.1F, 270, 0); //900
+            boolean needToDrive = true;
+            while (opModeIsActive()) {
+                for (VuforiaTrackable trackable : allTrackables) {
+
+                    telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener) trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
+
+                    OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener) trackable.getListener()).getUpdatedRobotLocation();
+                    if (robotLocationTransform != null) {
+                        lastLocation = robotLocationTransform;
+
+                    }
+                }
+
+                if (lastLocation != null) {
+
+                    telemetry.addData("Pos", format(lastLocation));
+                    Yposisie = lastLocation.getTranslation().get(0); //X
+                    if (Yposisie < (mmFTCFieldWidth / 12) + 25) { // 60mm delay //X
+                        drive.stop();
+                        needToDrive = false;
+                        break;
+                    }
+                } else {
+                    telemetry.addData("Pos", "Unknown");
+                }
+                if (needToDrive == true && drive.busy() == false) {
+                    telemetry.addData(">", "Missed target");
+                    drive.stop();
+                    break;
+                }
+                telemetry.update();
+            }
+            // Compensate if we did overshoot a little
+            Yposisie = lastLocation.getTranslation().get(0);//X
+            if (Yposisie < (mmFTCFieldWidth / 12) - 55) { //X
+                drive.all(Math.round((mmFTCFieldWidth / 12) - Yposisie) + 55, 0.3F, 90, 0);//X
+            }
+            // We should now be alligned with the target.
+            // Get distance to where the robot can determine the beacon colour / orientation
+            Xposisie = lastLocation.getTranslation().get(1);
+            telemetry.addData("Xposisie: %.2f", Xposisie);
+            helling = Xposisie - 340;
+            float Perfectplace1 = Perfectplace - helling;
+
+            drive.all(Math.round(Perfectplace1), 0.3F, 180, 0);
             for (VuforiaTrackable trackable : allTrackables) {
 
-                telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
+                telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener) trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
 
-                OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener)trackable.getListener()).getUpdatedRobotLocation();
+                OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener) trackable.getListener()).getUpdatedRobotLocation();
                 if (robotLocationTransform != null) {
                     lastLocation = robotLocationTransform;
 
                 }
             }
+            Xposisie = lastLocation.getTranslation().get(1);
+            telemetry.addData("Xposisie nuut", Xposisie);
+            int config = VortexUtils.NOT_VISIBLE;
+            sleep(1500); // XXX how long is really needed
+            boolean Beacon1;
 
-            if (lastLocation != null) {
+            try {
+                //telemetry.addData("-", "trying");
+                //telemetry.update();
+                DbgLog.msg("calling wait for");
+                config = VortexUtils.getBeaconConfig(
+                        ImgProc.getImageFromFrame(vuforia.getFrameQueue().take(), PIXEL_FORMAT.RGB565),
+                        first_beacon_listener, vuforia.getCameraCalibration());
+                telemetry.addData("Beacon", config);
+                telemetry.update();
+                Log.i(TAG, "runOp: " + config);
+                Beacon1 = true;
+            } catch (Exception e) {
+                telemetry.addData("Beacon", "could not not be found");
+                Beacon1 = false;
+            }
+            telemetry.update();
+            //sleep(2000);
+            double GyroB;
+            double GyroE;
 
-                telemetry.addData("Pos", format(lastLocation));
-                Xposisie = lastLocation.getTranslation().get(0);
-                if (Xposisie < (mmFTCFieldWidth/12) + 25) { // 60mm delay
-                    drive.stop();
-                    needToDrive = false;
-                    break;
+            //verskillende opsies vir die beacon
+            if (config == 1 || config == 2) {
+                drive.all(170, 0.4F, 180, 0); // 190
+                //drive.all(170,0.4F, 180,0); // 190
+                GyroB = robot.gyroc.getHeading();
+                if (config == 2) {
+                    //drive.all(20,0.1F,180,20);
+                    drive.turn(0.07F, 10);
+                    drive.all(40, 0.1F, 180, 0);//30
+                    sleep(750);
+                    //GyroE = robot.gyroc.getHeading();
+                    //telemetry.addData("Gyrowaarde", GyroE - GyroB);
+                    telemetry.addData("Config2", "1stturn  + sleep finish");
+                    telemetry.update();
+
+                    drive.all(50, 0.1F, 0, 0);
+                    //drive.all(20,0.1F,180, -20);
                 }
-            } else {
-                telemetry.addData("Pos", "Unknown");
-            }
-            if (needToDrive == true && drive.busy() == false) {
-                telemetry.addData(">", "Missed target");
-                drive.stop();
-                break;
-            }
-            telemetry.update();
-        }
-        // Compensate if we did overshoot a little
-        Xposisie = lastLocation.getTranslation().get(0);
-        if(Xposisie < (mmFTCFieldWidth/12) - 55){
-            drive.all(Math.round((mmFTCFieldWidth/12) - Xposisie ) + 55, 0.3F,90, 0);
-        }
-        // We should now be alligned with the target.
-        // Get distance to where the robot can determine the beacon colour / orientation
-        Yposisie = lastLocation.getTranslation().get(1);
-        telemetry.addData("Yposisie: %.2f", Yposisie);
-        helling = Yposisie - 340;
-        float Perfectplace1 = Perfectplace - helling;
 
-        drive.all(Math.round(Perfectplace1), 0.3F, 180, 0);
-        for (VuforiaTrackable trackable : allTrackables) {
-
-            telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
-
-            OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener)trackable.getListener()).getUpdatedRobotLocation();
-            if (robotLocationTransform != null) {
-                lastLocation = robotLocationTransform;
-
-            }
-        }
-        Yposisie = lastLocation.getTranslation().get(1);
-        telemetry.addData("Yposisie nuut",Yposisie);
-        int config = VortexUtils.NOT_VISIBLE;
-        sleep(1500); // XXX how long is really needed
-        boolean Beacon1;
-
-        try {
-            //telemetry.addData("-", "trying");
-            //telemetry.update();
-            DbgLog.msg("calling wait for");
-            config = VortexUtils.getBeaconConfig(
-                    ImgProc.getImageFromFrame(vuforia.getFrameQueue().take(), PIXEL_FORMAT.RGB565),
-                    first_beacon_listener, vuforia.getCameraCalibration());
-            telemetry.addData("Beacon", config);
-            telemetry.update();
-            Log.i(TAG, "runOp: " + config);
-            Beacon1 = true;
-        } catch (Exception e) {
-            telemetry.addData("Beacon", "could not not be found");
-            Beacon1 = false;
-        }
-        telemetry.update();
-        //sleep(2000);
-        double GyroB;
-        double GyroE;
-
-        //verskillende opsies vir die beacon
-        if (config == 1 || config == 2) {
-            drive.all(170, 0.4F, 180, 0); // 190
-            //drive.all(170,0.4F, 180,0); // 190
-             GyroB = robot.gyroc.getHeading();
-            if (config == 2) {
-                //drive.all(20,0.1F,180,20);
-                drive.turn(0.07F, 10);
-                drive.all(40, 0.1F, 180, 0);//30
-                sleep(750);
-                //GyroE = robot.gyroc.getHeading();
-                //telemetry.addData("Gyrowaarde", GyroE - GyroB);
-                telemetry.addData("Config2", "1stturn  + sleep finish");
-                telemetry.update();
-
-                drive.all(50, 0.1F, 0, 0);
-                //drive.all(20,0.1F,180, -20);
-            }
-
-            if (config == 1) {
-                //drive.all(70,0.1F, 180,-10);
-                drive.turn(0.07F, -10);
-                drive.all(40, 0.1F, 180, 0);//30
-                sleep(750);
-                //GyroE = robot.gyroc.getHeading();
-                //telemetry.addData("Gyrowaarde", GyroE - GyroB);
-                telemetry.addData("Config1", "1stturn  + sleep finish");
-                telemetry.update();
-                drive.all(50, 0.1F, 0, 0);
-                //drive.all(20,0.1F,180, 20);
-            }
+                if (config == 1) {
+                    //drive.all(70,0.1F, 180,-10);
+                    drive.turn(0.07F, -10);
+                    drive.all(40, 0.1F, 180, 0);//30
+                    sleep(750);
+                    //GyroE = robot.gyroc.getHeading();
+                    //telemetry.addData("Gyrowaarde", GyroE - GyroB);
+                    telemetry.addData("Config1", "1stturn  + sleep finish");
+                    telemetry.update();
+                    drive.all(50, 0.1F, 0, 0);
+                    //drive.all(20,0.1F,180, 20);
+                }
                 sleep(750);
                 GyroE = robot.gyroc.getHeading();
 
                 drive.turn(0.1F, (int) Math.round(GyroB - GyroE));
 
-            //agteruit ry
-            drive.all(700,0.5F,0, 0);
-        }
-        else {
-            //agteruit ry
-            drive.all(700 - 170, 0.5F, 0, 0);
-        }
-        sleep(500);
-        for (VuforiaTrackable trackable : allTrackables) {
-
-            telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
-
-            OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener)trackable.getListener()).getUpdatedRobotLocation();
-            if (robotLocationTransform != null) {
-                lastLocation = robotLocationTransform;
-
+                //agteruit ry
+                drive.all(700, 0.5F, 0, 0);
+            } else {
+                //agteruit ry
+                drive.all(700 - 170, 0.5F, 0, 0);
             }
-        }
-
-        float zangle = Orientation.getOrientation(lastLocation,AxesReference.EXTRINSIC, AxesOrder.XYZ,AngleUnit.DEGREES).thirdAngle;
-        DbgLog.msg("Z Angle: %f" , zangle);
-
-        drive.turn(0.1F, Math.round(zangle) * -1);
-
-        sleep(500);
-
-        drive.all(1100,0.5F,270,0);
-        first_beacon_listener = (VuforiaTrackableDefaultListener) blueLegos.getListener();
-        sleep(500);
-        drive.init(230,0.1F,270, 0);
-        needToDrive = true;
-        while (opModeIsActive()) {
+            sleep(500);
             for (VuforiaTrackable trackable : allTrackables) {
 
-                telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
+                telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener) trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
 
-                OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener)trackable.getListener()).getUpdatedRobotLocation();
+                OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener) trackable.getListener()).getUpdatedRobotLocation();
                 if (robotLocationTransform != null) {
                     lastLocation = robotLocationTransform;
 
                 }
             }
 
-            if (lastLocation != null) {
+            float zangle = Orientation.getOrientation(lastLocation, AxesReference.EXTRINSIC, AxesOrder.XYZ, AngleUnit.DEGREES).thirdAngle;
+            DbgLog.msg("Z Angle: %f", zangle);
 
-                telemetry.addData("Pos", format(lastLocation));
-                Xposisie = lastLocation.getTranslation().get(0);
-                if (Xposisie < (mmFTCFieldWidth/12*-3) + 25) { // 60mm delay
+            drive.turn(0.1F, Math.round(zangle) * -1);
+
+            sleep(500);
+
+            drive.all(1100, 0.5F, 270, 0);
+            first_beacon_listener = (VuforiaTrackableDefaultListener) blueLegos.getListener();
+            sleep(500);
+            drive.init(230, 0.1F, 270, 0);
+            needToDrive = true;
+            while (opModeIsActive()) {
+                for (VuforiaTrackable trackable : allTrackables) {
+
+                    telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener) trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
+
+                    OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener) trackable.getListener()).getUpdatedRobotLocation();
+                    if (robotLocationTransform != null) {
+                        lastLocation = robotLocationTransform;
+
+                    }
+                }
+
+                if (lastLocation != null) {
+
+                    telemetry.addData("Pos", format(lastLocation));
+                    Yposisie = lastLocation.getTranslation().get(0);//X
+                    if (Yposisie < (mmFTCFieldWidth / 12 * -3) + 25) { // 60mm delay//X
+                        drive.stop();
+                        needToDrive = false;
+                        break;
+                    }
+                } else {
+                    telemetry.addData("Pos", "Unknown");
+                }
+                if (needToDrive == true && drive.busy() == false) {
+                    telemetry.addData(">", "Missed target");
                     drive.stop();
-                    needToDrive = false;
                     break;
                 }
-            } else {
-                telemetry.addData("Pos", "Unknown");
+                telemetry.update();
             }
-            if (needToDrive == true && drive.busy() == false) {
-                telemetry.addData(">", "Missed target");
-                drive.stop();
-                break;
+            Xposisie = lastLocation.getTranslation().get(1);
+            telemetry.addData("Xposisie: %.2f", Xposisie);
+            helling = Xposisie - 340;
+            float Perfectplace2 = Perfectplace - helling;
+
+            drive.all(Math.round(Perfectplace2), 0.4F, 180, 0);
+            sleep(500);
+            for (VuforiaTrackable trackable : allTrackables) {
+
+                telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener) trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
+
+                OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener) trackable.getListener()).getUpdatedRobotLocation();
+                if (robotLocationTransform != null) {
+                    lastLocation = robotLocationTransform;
+
+                }
+            }
+            Xposisie = lastLocation.getTranslation().get(1);
+            telemetry.addData("Xposisie nuut", Xposisie);
+            config = VortexUtils.NOT_VISIBLE;
+            sleep(500); // XXX how long is really needed
+            boolean Beacon2;
+
+            try {
+                //telemetry.addData("-", "trying");
+                //telemetry.update();
+                DbgLog.msg("calling wait for");
+                config = VortexUtils.getBeaconConfig(
+                        ImgProc.getImageFromFrame(vuforia.getFrameQueue().take(), PIXEL_FORMAT.RGB565),
+                        first_beacon_listener, vuforia.getCameraCalibration());
+                telemetry.addData("Beacon", config);
+                telemetry.update();
+                Log.i(TAG, "runOp: " + config);
+                Beacon2 = true;
+            } catch (Exception e) {
+                telemetry.addData("Beacon", "could not not be found");
+                Beacon2 = false;
             }
             telemetry.update();
-        }
-        Yposisie = lastLocation.getTranslation().get(1);
-        telemetry.addData("Yposisie: %.2f", Yposisie);
-        helling = Yposisie - 340;
-        float Perfectplace2 = Perfectplace - helling;
+            //sleep(2000);
 
-        drive.all(Math.round(Perfectplace2), 0.4F, 180, 0);
-        sleep(500);
-        for (VuforiaTrackable trackable : allTrackables) {
+            //verskillende opsies vir die beacon
+            if (config == 1 || config == 2) {
+                drive.all(170, 0.4F, 180, 0); // 190
+                //drive.all(170,0.1F, 180,0);//175
+                GyroB = robot.gyroc.getHeading();
+                if (config == 2) {
+                    //drive.all(20,0.1F,180,20);
+                    drive.turn(0.07F, 10);
+                    drive.all(30, 0.1F, 180, 0);
+                    sleep(750);
+                    //GyroE = robot.gyroc.getHeading();
+                    //telemetry.addData("Gyrowaarde", GyroE - GyroB);
+                    telemetry.addData("Config2", "1stturn  + sleep finish");
+                    telemetry.update();
 
-            telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
+                    drive.all(50, 0.1F, 0, 0);
+                    //drive.all(20,0.1F,180, -20);
+                }
 
-            OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener)trackable.getListener()).getUpdatedRobotLocation();
-            if (robotLocationTransform != null) {
-                lastLocation = robotLocationTransform;
-
-            }
-        }
-        Yposisie = lastLocation.getTranslation().get(1);
-        telemetry.addData("Yposisie nuut",Yposisie);
-        config = VortexUtils.NOT_VISIBLE;
-        sleep(500); // XXX how long is really needed
-        boolean Beacon2;
-
-        try {
-            //telemetry.addData("-", "trying");
-            //telemetry.update();
-            DbgLog.msg("calling wait for");
-            config = VortexUtils.getBeaconConfig(
-                    ImgProc.getImageFromFrame(vuforia.getFrameQueue().take(), PIXEL_FORMAT.RGB565),
-                    first_beacon_listener, vuforia.getCameraCalibration());
-            telemetry.addData("Beacon", config);
-            telemetry.update();
-            Log.i(TAG, "runOp: " + config);
-            Beacon2 = true;
-        } catch (Exception e) {
-            telemetry.addData("Beacon", "could not not be found");
-            Beacon2 = false;
-        }
-        telemetry.update();
-        //sleep(2000);
-
-        //verskillende opsies vir die beacon
-        if (config == 1 || config == 2) {
-            drive.all(170,0.4F, 180,0); // 190
-            //drive.all(170,0.1F, 180,0);//175
-            GyroB = robot.gyroc.getHeading();
-            if (config == 2) {
-                //drive.all(20,0.1F,180,20);
-                drive.turn(0.07F, 10);
-                drive.all(30, 0.1F, 180, 0);
-                sleep(750);
-                //GyroE = robot.gyroc.getHeading();
-                //telemetry.addData("Gyrowaarde", GyroE - GyroB);
-                telemetry.addData("Config2", "1stturn  + sleep finish");
-                telemetry.update();
-
-                drive.all(50, 0.1F, 0, 0);
-                //drive.all(20,0.1F,180, -20);
-            }
-
-            if (config == 1) {
-                //drive.all(70,0.1F, 180,-10);
-                drive.turn(0.07F, -10);
-                drive.all(30, 0.1F, 180, 0);
-                sleep(750);
-                //GyroE = robot.gyroc.getHeading();
-                //telemetry.addData("Gyrowaarde", GyroE - GyroB);
-                telemetry.addData("Config1", "1stturn  + sleep finish");
-                telemetry.update();
-                drive.all(50, 0.1F, 0, 0);
-                //drive.all(20,0.1F,180, 20);
-            }
+                if (config == 1) {
+                    //drive.all(70,0.1F, 180,-10);
+                    drive.turn(0.07F, -10);
+                    drive.all(30, 0.1F, 180, 0);
+                    sleep(750);
+                    //GyroE = robot.gyroc.getHeading();
+                    //telemetry.addData("Gyrowaarde", GyroE - GyroB);
+                    telemetry.addData("Config1", "1stturn  + sleep finish");
+                    telemetry.update();
+                    drive.all(50, 0.1F, 0, 0);
+                    //drive.all(20,0.1F,180, 20);
+                }
                 sleep(750);
                 GyroE = robot.gyroc.getHeading();
 
                 drive.turn(0.1F, (int) Math.round(GyroB - GyroE));
                 drive.all(100, 0.5F, 0, 0);
-            // Compensate if we did overshoot a little
+                // Compensate if we did overshoot a little
 //        Xposisie = lastLocation.getTranslation().get(0);
 //        if(Xposisie < (mmFTCFieldWidth/12) - 60){
 //            drive.all(Math.round((mmFTCFieldWidth/12) - Xposisie ) + 60, 0.1F,90, 0);
 //        }
 
+            } else {
+                drive.all(100, 0.5F, 0, 0);
+            }
         }
 
-        else {
-            drive.all(100,0.5F,0,0);
+
+
+        if (ftcConfig.param.colorIsRed == true){
+
+            Perfectplace = Perfectplace * -1;
+
+
+            first_beacon_listener = (VuforiaTrackableDefaultListener) redGears.getListener();
+
+            telemetry.clearAll();
+            telemetry.addData("A", "Running the LinearOpMode now");
+            telemetry.addData("ColorIsRed", Boolean.toString(ftcConfig.param.colorIsRed));
+            telemetry.addData("DelayInSec", Integer.toString(ftcConfig.param.delayInSec));
+            telemetry.addData("AutonType", ftcConfig.param.autonType);
+
+            mecGR drive = new mecGR();
+            //drive.turn(0.1F,10);
+            //sleep(30000);
+            // We need to end up a bit more than a tile away from the target, otherwise it does not fit in the camera view
+            drive.all(950, 0.6F, 90, 0); //1000
+            //drive.init(950, 0.6F, 90, 0); //1000
+            //while(drive.busy())
+            //    ;
+            drive.init(950, 0.1F, 90, 0); //900
+            boolean needToDrive = true;
+            while (opModeIsActive()) {
+                for (VuforiaTrackable trackable : allTrackables) {
+
+                    telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener) trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
+
+                    OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener) trackable.getListener()).getUpdatedRobotLocation();
+                    if (robotLocationTransform != null) {
+                        lastLocation = robotLocationTransform;
+
+                    }
+                }
+
+                if (lastLocation != null) {
+
+                    telemetry.addData("Pos", format(lastLocation));
+                    Yposisie = lastLocation.getTranslation().get(1);//X //0
+                    if (Yposisie > (-mmFTCFieldWidth / 12)- 25) { // 60mm delay//X
+                        drive.stop();
+                        needToDrive = false;
+                        break;
+                    }
+                } else {
+                    telemetry.addData("Pos", "Unknown");
+                }
+                if (needToDrive == true && drive.busy() == false) {
+                    telemetry.addData(">", "Missed target");
+                    drive.stop();
+                    break;
+                }
+                telemetry.update();
+            }
+            // Compensate if we did overshoot a little
+            Yposisie = lastLocation.getTranslation().get(1);//X
+            if (Yposisie > (-mmFTCFieldWidth / 12) - 55) {//X
+                drive.all(Math.round((-mmFTCFieldWidth / 12) - Yposisie) + 55, 0.3F, 270, 0);//X
+            }
+            // We should now be alligned with the target.
+            // Get distance to where the robot can determine the beacon colour / orientation
+            Xposisie = lastLocation.getTranslation().get(0);//1
+            telemetry.addData("Xposisie: %.2f", Xposisie);
+            helling = Xposisie + 340;
+            float Perfectplace1 = helling - Perfectplace;
+            telemetry.addData("PerfectPlace", Perfectplace1);
+            telemetry.update();
+
+            drive.all(Math.round(Perfectplace1), 0.3F, 180, 0);
+            for (VuforiaTrackable trackable : allTrackables) {
+
+                telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener) trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
+
+                OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener) trackable.getListener()).getUpdatedRobotLocation();
+                if (robotLocationTransform != null) {
+                    lastLocation = robotLocationTransform;
+
+                }
+            }
+            Xposisie = lastLocation.getTranslation().get(0);
+            telemetry.addData("Xposisie nuut", Xposisie);
+            int config = VortexUtils.NOT_VISIBLE;
+            sleep(1500); // XXX how long is really needed
+            //boolean Beacon1;
+
+            try {
+                //telemetry.addData("-", "trying");
+                //telemetry.update();
+                DbgLog.msg("calling wait for");
+                config = VortexUtils.getBeaconConfig(
+                        ImgProc.getImageFromFrame(vuforia.getFrameQueue().take(), PIXEL_FORMAT.RGB565),
+                        first_beacon_listener, vuforia.getCameraCalibration());
+                telemetry.addData("Beacon", config);
+                telemetry.update();
+                Log.i(TAG, "runOp: " + config);
+                //Beacon1 = true;
+            } catch (Exception e) {
+                telemetry.addData("Beacon", "could not not be found");
+                //Beacon1 = false;
+            }
+            telemetry.update();
+            //sleep(2000);
+            double GyroB;
+            double GyroE;
+
+            //verskillende opsies vir die beacon
+            if (config == 1 || config == 2) {
+                drive.all(140, 0.4F, 180, 0); // 190
+                //drive.all(170,0.4F, 180,0); // 190
+                GyroB = robot.gyroc.getHeading();
+                if (config == 1) {
+                    //drive.all(20,0.1F,180,20);
+                    drive.turn(0.07F, 10);
+                    drive.all(60, 0.1F, 180, 0);//30
+                    sleep(750);
+                    //GyroE = robot.gyroc.getHeading();
+                    //telemetry.addData("Gyrowaarde", GyroE - GyroB);
+                    telemetry.addData("Config2", "1stturn  + sleep finish");
+                    telemetry.update();
+
+                    drive.all(60, 0.1F, 0, 0);
+                    //drive.all(20,0.1F,180, -20);
+                }
+
+                if (config == 2) {
+                    //drive.all(70,0.1F, 180,-10);
+                    drive.turn(0.07F, -10);
+                    drive.all(60, 0.1F, 180, 0);//30
+                    sleep(750);
+                    //GyroE = robot.gyroc.getHeading();
+                    //telemetry.addData("Gyrowaarde", GyroE - GyroB);
+                    telemetry.addData("Config1", "1stturn  + sleep finish");
+                    telemetry.update();
+                    drive.all(50, 0.1F, 0, 0);
+                    //drive.all(20,0.1F,180, 20);
+                }
+                sleep(750);
+                GyroE = robot.gyroc.getHeading();
+
+                drive.turn(0.1F, (int) Math.round(GyroB - GyroE));
+
+                //agteruit ry
+                drive.all(700, 0.5F, 0, 0);
+            }
+
+            else {
+                //agteruit ry
+                drive.all(700 - 170, 0.5F, 0, 0);
+            }
+            sleep(500);
+
+            for (VuforiaTrackable trackable : allTrackables) {
+
+                telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener) trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
+
+                OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener) trackable.getListener()).getUpdatedRobotLocation();
+                if (robotLocationTransform != null) {
+                    lastLocation = robotLocationTransform;
+
+                }
+            }
+
+            float zangle = Orientation.getOrientation(lastLocation, AxesReference.EXTRINSIC, AxesOrder.XYZ, AngleUnit.DEGREES).thirdAngle;
+            DbgLog.msg("Z Angle: %f", zangle);
+
+            drive.turn(0.1F, Math.round(Math.signum(zangle)*(90 - Math.abs(Math.round(zangle)))));
+
+            sleep(500);
+
+            drive.all(1000, 0.5F, 90, 0);
+
+            first_beacon_listener = (VuforiaTrackableDefaultListener) redTools.getListener();
+            sleep(500);
+            drive.init(330, 0.1F, 90, 0);
+            needToDrive = true;
+            while (opModeIsActive()) {
+                for (VuforiaTrackable trackable : allTrackables) {
+
+                    telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener) trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
+
+                    OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener) trackable.getListener()).getUpdatedRobotLocation();
+                    if (robotLocationTransform != null) {
+                        lastLocation = robotLocationTransform;
+
+                    }
+                }
+
+                if (lastLocation != null) {
+
+                    telemetry.addData("Pos", format(lastLocation));
+                    Yposisie = lastLocation.getTranslation().get(1);//X
+                    if (Yposisie > (mmFTCFieldWidth / 12 * 3) + 25) { // 60mm delay//X
+                        drive.stop();
+                        needToDrive = false;
+                        break;
+                    }
+                } else {
+                    telemetry.addData("Pos", "Unknown");
+                }
+                if (needToDrive == true && drive.busy() == false) {
+                    telemetry.addData(">", "Missed target");
+                    drive.stop();
+                    break;
+                }
+                telemetry.update();
+            }
+            Xposisie = lastLocation.getTranslation().get(0);
+            telemetry.addData("Xposisie: %.2f", Xposisie);
+            helling = Xposisie + 340;
+            float Perfectplace2 =helling - Perfectplace;
+
+            drive.all(Math.round(Perfectplace2), 0.4F, 180, 0);
+            sleep(500);
+            for (VuforiaTrackable trackable : allTrackables) {
+
+                telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener) trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
+
+                OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener) trackable.getListener()).getUpdatedRobotLocation();
+                if (robotLocationTransform != null) {
+                    lastLocation = robotLocationTransform;
+
+                }
+            }
+            Xposisie = lastLocation.getTranslation().get(1);
+            telemetry.addData("Xposisie nuut", Xposisie);
+            config = VortexUtils.NOT_VISIBLE;
+            sleep(500); // XXX how long is really needed
+            boolean Beacon2;
+
+            try {
+                //telemetry.addData("-", "trying");
+                //telemetry.update();
+                DbgLog.msg("calling wait for");
+                config = VortexUtils.getBeaconConfig(
+                        ImgProc.getImageFromFrame(vuforia.getFrameQueue().take(), PIXEL_FORMAT.RGB565),
+                        first_beacon_listener, vuforia.getCameraCalibration());
+                telemetry.addData("Beacon", config);
+                telemetry.update();
+                Log.i(TAG, "runOp: " + config);
+                Beacon2 = true;
+            } catch (Exception e) {
+                telemetry.addData("Beacon", "could not not be found");
+                Beacon2 = false;
+            }
+            telemetry.update();
+            //sleep(2000);
+
+            if (config == 1 || config == 2) {
+                drive.all(140, 0.4F, 180, 0); // 190
+                //drive.all(170,0.4F, 180,0); // 190
+                GyroB = robot.gyroc.getHeading();
+                if (config == 1) {
+                    //drive.all(20,0.1F,180,20);
+                    drive.turn(0.07F, 10);
+                    drive.all(60, 0.1F, 180, 0);//30
+                    sleep(750);
+                    //GyroE = robot.gyroc.getHeading();
+                    //telemetry.addData("Gyrowaarde", GyroE - GyroB);
+                    telemetry.addData("Config2", "1stturn  + sleep finish");
+                    telemetry.update();
+
+                    drive.all(60, 0.1F, 0, 0);
+                    //drive.all(20,0.1F,180, -20);
+                }
+
+                if (config == 2) {
+                    //drive.all(70,0.1F, 180,-10);
+                    drive.turn(0.07F, -10);
+                    drive.all(60, 0.1F, 180, 0);//30
+                    sleep(750);
+                    //GyroE = robot.gyroc.getHeading();
+                    //telemetry.addData("Gyrowaarde", GyroE - GyroB);
+                    telemetry.addData("Config1", "1stturn  + sleep finish");
+                    telemetry.update();
+                    drive.all(50, 0.1F, 0, 0);
+                    //drive.all(20,0.1F,180, 20);
+                }
+                sleep(750);
+                GyroE = robot.gyroc.getHeading();
+
+                drive.turn(0.1F, (int) Math.round(GyroB - GyroE));
+
+                //agteruit ry
+                drive.all(700, 0.5F, 0, 0);
+            }
+
+            else {
+                //agteruit ry
+                drive.all(100 - 170, 0.5F, 0, 0);
+            }
         }
 
     }

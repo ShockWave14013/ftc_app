@@ -23,8 +23,9 @@ public class FtcConfig {
     BEACONSIDE_ADJUST,
     //AUTON_TYPE,
     READY;
-    private static ConfigStep[] vals;
+    //private static ConfigStep[] vals;
             //telemetry.update();= values();
+    private static ConfigStep[] vals = values();
     public ConfigStep next() { return vals[(this.ordinal()+1) % vals.length];}
     public ConfigStep prev() { return vals[(this.ordinal()-1+vals.length) % vals.length];}
   }
@@ -188,63 +189,63 @@ public class FtcConfig {
         }
       }
     }
-
-    currConfigStepCheck = ConfigStep.PERFECTPLACE_ADJUST;
-    // message to driver about state of this config parameter
-    if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
-      opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Perfect Place: " + param.PPA + " mm");
-    }
-    // configure this parameter
-    if (configStepState == currConfigStepCheck) {
-      opMode.telemetry.addData("C" + configStepState.ordinal() + "A", "Push Y for +, A for -");
-      if (y1 && !lastY1) {
-        param.PPA++;
-      }
-      if (a1 && !lastA1) {
-        param.PPA--;
-        if (param.PPA < 0) {
-          param.PPA = 0;
-        }
-      }
-    }
-
-    currConfigStepCheck = ConfigStep.BEACONSIDE_ADJUST;
-    // message to driver about state of this config parameter
-    if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
-      opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Side of beacon adjust: " + param.SideAdjust + " mm");
-    }
-    // configure this parameter
-    if (configStepState == currConfigStepCheck) {
-      opMode.telemetry.addData("C" + configStepState.ordinal() + "A", "Push Y for +, A for -");
-      if (y1 && !lastY1) {
-        param.SideAdjust++;
-      }
-      if (a1 && !lastA1) {
-        param.SideAdjust--;
-        if (param.SideAdjust < 0) {
-          param.SideAdjust = 0;
-        }
-      }
-    }
-
-    currConfigStepCheck = ConfigStep.AJUSTSPEED1STDRIVE;
-    // message to driver about state of this config parameter
-    if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
-      opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Adjusts 1st drive speed: " + param.AS1D + " mm");
-    }
-    // configure this parameter
-    if (configStepState == currConfigStepCheck) {
-      opMode.telemetry.addData("C" + configStepState.ordinal() + "A", "Push Y for +, A for -");
-      if (y1 && !lastY1) {
-        param.AS1D++;
-      }
-      if (a1 && !lastA1) {
-        param.AS1D--;
-        if (param.AS1D < 0) {
-          param.AS1D = 0;
-        }
-      }
-    }
+//
+//    currConfigStepCheck = ConfigStep.PERFECTPLACE_ADJUST;
+//    // message to driver about state of this config parameter
+//    if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
+//      opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Perfect Place: " + param.PPA + " mm");
+//    }
+//    // configure this parameter
+//    if (configStepState == currConfigStepCheck) {
+//      opMode.telemetry.addData("C" + configStepState.ordinal() + "A", "Push Y for +, A for -");
+//      if (y1 && !lastY1) {
+//        param.PPA++;
+//      }
+//      if (a1 && !lastA1) {
+//        param.PPA--;
+//        if (param.PPA < 0) {
+//          param.PPA = 0;
+//        }
+//      }
+//    }
+//
+//    currConfigStepCheck = ConfigStep.BEACONSIDE_ADJUST;
+//    // message to driver about state of this config parameter
+//    if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
+//      opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Side of beacon adjust: " + param.SideAdjust + " mm");
+//    }
+//    // configure this parameter
+//    if (configStepState == currConfigStepCheck) {
+//      opMode.telemetry.addData("C" + configStepState.ordinal() + "A", "Push Y for +, A for -");
+//      if (y1 && !lastY1) {
+//        param.SideAdjust++;
+//      }
+//      if (a1 && !lastA1) {
+//        param.SideAdjust--;
+//        if (param.SideAdjust < 0) {
+//          param.SideAdjust = 0;
+//        }
+//      }
+//    }
+//
+//    currConfigStepCheck = ConfigStep.AJUSTSPEED1STDRIVE;
+//    // message to driver about state of this config parameter
+//    if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
+//      opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Adjusts 1st drive speed: " + param.AS1D + " mm");
+//    }
+//    // configure this parameter
+//    if (configStepState == currConfigStepCheck) {
+//      opMode.telemetry.addData("C" + configStepState.ordinal() + "A", "Push Y for +, A for -");
+//      if (y1 && !lastY1) {
+//        param.AS1D++;
+//      }
+//      if (a1 && !lastA1) {
+//        param.AS1D--;
+//        if (param.AS1D < 0) {
+//          param.AS1D = 0;
+//        }
+//      }
+//    }
 
     //currConfigStepCheck = ConfigStep.AUTON_TYPE;
     // message to driver about state of this config parameter
