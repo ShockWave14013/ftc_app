@@ -48,7 +48,8 @@ public class SWHardware
     public DcMotor shootertilt = null;
     public DcMotor lefts = null;
     public DcMotor rights = null;
-    public Servo convservo;
+    public DcMotor convmotor = null;
+    //public Servo convservo;
 
 
     // gyroc = on chasis
@@ -57,6 +58,12 @@ public class SWHardware
     public static final double MID_SERVO       =  0.5 ;
     public static final double ARM_UP_POWER    =  0.45 ;
     public static final double ARM_DOWN_POWER  = -0.45 ;
+
+    public static final float KICKER_PULL = 0.43F;
+    public static final float KICKER_PUSH = 0.8F;
+
+    public static final float CONVEYOR_STOP = 0.0F;
+    public static final float CONVEYOR_RUN = 0.5F;
 
     /* local OpMode members. */
     HardwareMap hwMap           =  null;
@@ -126,15 +133,20 @@ public class SWHardware
         //Rot = hwMap.servo.get("Rotator");
 
         //Rot.setPosition(0.5);
+        convmotor = hwMap.dcMotor.get("Conv");
+        convmotor.setDirection(DcMotor.Direction.REVERSE);
+        shootertilt.setPower(0);
+        shootertilt.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
 
         BallLifter = hwMap.servo.get("BallLifter");
         BallLifter.setPosition(0.72);
 
         Kicker = hwMap.servo.get("Kicker");
-        Kicker.setPosition(0.43);
+        Kicker.setPosition(KICKER_PULL);
 
-        convservo = hwMap.servo.get("Convservo");
-        convservo.setPosition(0.505F);
+        //convservo = hwMap.servo.get("Convservo");
+        //convservo.setPosition(0.505F);
 
         cdim = hwMap.deviceInterfaceModule.get("dim");
         gyroc = hwMap.get(LSM6.class,"gyroc");

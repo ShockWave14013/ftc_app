@@ -94,6 +94,7 @@ import org.firstinspires.ftc.teamcode.helpers.VortexUtils;
 
 import static org.firstinspires.ftc.teamcode.helpers.VortexUtils.BEACON_BLUE_RED;
 import static org.firstinspires.ftc.teamcode.helpers.VortexUtils.BEACON_RED_BLUE;
+import static org.firstinspires.ftc.teamcode.helpers.VortexUtils.NOT_VISIBLE;
 
 @Autonomous(name="Ry met vision", group ="Robot")
 //@Disabled
@@ -381,7 +382,12 @@ public class ryvision extends LinearOpMode {
         telemetry.addData("-","notOpMode");
         telemetry.update();
 
+
+
         waitForStart();
+
+
+        //if ()
 
         first_beacon_listener = (VuforiaTrackableDefaultListener) blueWheels.getListener();
 
@@ -395,8 +401,8 @@ public class ryvision extends LinearOpMode {
         //drive.turn(0.1F,10);
         //sleep(30000);
         // We need to end up a bit more than a tile away from the target, otherwise it does not fit in the camera view
-        drive.all(1000,0.2F, 270,0);
-        drive.init(900,0.1F,270, 0);
+        drive.all(950,0.6F, 270,0); //1000
+        drive.init(950,0.1F,270, 0); //900
         boolean needToDrive = true;
         while (opModeIsActive()) {
             for (VuforiaTrackable trackable : allTrackables) {
@@ -414,7 +420,7 @@ public class ryvision extends LinearOpMode {
 
                 telemetry.addData("Pos", format(lastLocation));
                 Xposisie = lastLocation.getTranslation().get(0);
-                if (Xposisie < (mmFTCFieldWidth/12) + 55) { // 60mm delay
+                if (Xposisie < (mmFTCFieldWidth/12) + 25) { // 60mm delay
                     drive.stop();
                     needToDrive = false;
                     break;
@@ -432,7 +438,7 @@ public class ryvision extends LinearOpMode {
         // Compensate if we did overshoot a little
         Xposisie = lastLocation.getTranslation().get(0);
         if(Xposisie < (mmFTCFieldWidth/12) - 55){
-            drive.all(Math.round((mmFTCFieldWidth/12) - Xposisie ) + 55, 0.1F,90, 0);
+            drive.all(Math.round((mmFTCFieldWidth/12) - Xposisie ) + 55, 0.3F,90, 0);
         }
         // We should now be alligned with the target.
         // Get distance to where the robot can determine the beacon colour / orientation
@@ -441,7 +447,7 @@ public class ryvision extends LinearOpMode {
         helling = Yposisie - 340;
         float Perfectplace1 = Perfectplace - helling;
 
-        drive.all(Math.round(Perfectplace1), 0.2F, 180, 0);
+        drive.all(Math.round(Perfectplace1), 0.3F, 180, 0);
         for (VuforiaTrackable trackable : allTrackables) {
 
             telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
@@ -455,7 +461,8 @@ public class ryvision extends LinearOpMode {
         Yposisie = lastLocation.getTranslation().get(1);
         telemetry.addData("Yposisie nuut",Yposisie);
         int config = VortexUtils.NOT_VISIBLE;
-        sleep(2000); // XXX how long is really needed
+        sleep(1500); // XXX how long is really needed
+        boolean Beacon1;
 
         try {
             //telemetry.addData("-", "trying");
@@ -467,52 +474,60 @@ public class ryvision extends LinearOpMode {
             telemetry.addData("Beacon", config);
             telemetry.update();
             Log.i(TAG, "runOp: " + config);
+            Beacon1 = true;
         } catch (Exception e) {
             telemetry.addData("Beacon", "could not not be found");
+            Beacon1 = false;
         }
         telemetry.update();
         //sleep(2000);
+        double GyroB;
+        double GyroE;
 
         //verskillende opsies vir die beacon
-        drive.all(190,0.1F, 180,0);
-        double GyroB = robot.gyroc.getHeading();
-        double GyroE;
-        if (config == 2){
-            //drive.all(20,0.1F,180,20);
-            drive.turn(0.07F,10);
-            drive.all(30,0.1F,180, 0);
-            sleep(750);
-            //GyroE = robot.gyroc.getHeading();
-            //telemetry.addData("Gyrowaarde", GyroE - GyroB);
-            telemetry.addData("Config2", "1stturn  + sleep finish");
-            telemetry.update();
+        if (config == 1 || config == 2) {
+            drive.all(170, 0.4F, 180, 0); // 190
+            //drive.all(170,0.4F, 180,0); // 190
+             GyroB = robot.gyroc.getHeading();
+            if (config == 2) {
+                //drive.all(20,0.1F,180,20);
+                drive.turn(0.07F, 10);
+                drive.all(40, 0.1F, 180, 0);//30
+                sleep(750);
+                //GyroE = robot.gyroc.getHeading();
+                //telemetry.addData("Gyrowaarde", GyroE - GyroB);
+                telemetry.addData("Config2", "1stturn  + sleep finish");
+                telemetry.update();
 
-            drive.all(50,0.1F,0,0);
-            //drive.all(20,0.1F,180, -20);
+                drive.all(50, 0.1F, 0, 0);
+                //drive.all(20,0.1F,180, -20);
+            }
+
+            if (config == 1) {
+                //drive.all(70,0.1F, 180,-10);
+                drive.turn(0.07F, -10);
+                drive.all(40, 0.1F, 180, 0);//30
+                sleep(750);
+                //GyroE = robot.gyroc.getHeading();
+                //telemetry.addData("Gyrowaarde", GyroE - GyroB);
+                telemetry.addData("Config1", "1stturn  + sleep finish");
+                telemetry.update();
+                drive.all(50, 0.1F, 0, 0);
+                //drive.all(20,0.1F,180, 20);
+            }
+                sleep(750);
+                GyroE = robot.gyroc.getHeading();
+
+                drive.turn(0.1F, (int) Math.round(GyroB - GyroE));
+
+            //agteruit ry
+            drive.all(700,0.5F,0, 0);
         }
-
-        if (config == 1){
-            //drive.all(70,0.1F, 180,-10);
-            drive.turn(0.07F,-10);
-            drive.all(30,0.1F,180, 0);
-            sleep(750);
-            //GyroE = robot.gyroc.getHeading();
-            //telemetry.addData("Gyrowaarde", GyroE - GyroB);
-            telemetry.addData("Config1", "1stturn  + sleep finish");
-            telemetry.update();
-            drive.all(50, 0.1F, 0,0);
-            //drive.all(20,0.1F,180, 20);
+        else {
+            //agteruit ry
+            drive.all(700 - 170, 0.5F, 0, 0);
         }
-        sleep(750);
-        GyroE = robot.gyroc.getHeading();
-
-        drive.turn(0.1F, (int)Math.round(GyroB - GyroE));
-
-//        DbgLog.msg("After sleep 5000")
-
-        //agteruit ry
-        drive.all(700,0.1F,0, 0);
-        sleep(1000);
+        sleep(500);
         for (VuforiaTrackable trackable : allTrackables) {
 
             telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
@@ -529,11 +544,11 @@ public class ryvision extends LinearOpMode {
 
         drive.turn(0.1F, Math.round(zangle) * -1);
 
-        sleep(1000);
+        sleep(500);
 
-        drive.all(1100,0.2F,270,0);
+        drive.all(1100,0.5F,270,0);
         first_beacon_listener = (VuforiaTrackableDefaultListener) blueLegos.getListener();
-        sleep(1000);
+        sleep(500);
         drive.init(230,0.1F,270, 0);
         needToDrive = true;
         while (opModeIsActive()) {
@@ -572,8 +587,8 @@ public class ryvision extends LinearOpMode {
         helling = Yposisie - 340;
         float Perfectplace2 = Perfectplace - helling;
 
-        drive.all(Math.round(Perfectplace2), 0.2F, 180, 0);
-        sleep(5000);
+        drive.all(Math.round(Perfectplace2), 0.4F, 180, 0);
+        sleep(500);
         for (VuforiaTrackable trackable : allTrackables) {
 
             telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
@@ -587,7 +602,8 @@ public class ryvision extends LinearOpMode {
         Yposisie = lastLocation.getTranslation().get(1);
         telemetry.addData("Yposisie nuut",Yposisie);
         config = VortexUtils.NOT_VISIBLE;
-        sleep(2000); // XXX how long is really needed
+        sleep(500); // XXX how long is really needed
+        boolean Beacon2;
 
         try {
             //telemetry.addData("-", "trying");
@@ -599,46 +615,61 @@ public class ryvision extends LinearOpMode {
             telemetry.addData("Beacon", config);
             telemetry.update();
             Log.i(TAG, "runOp: " + config);
+            Beacon2 = true;
         } catch (Exception e) {
             telemetry.addData("Beacon", "could not not be found");
+            Beacon2 = false;
         }
         telemetry.update();
         //sleep(2000);
 
         //verskillende opsies vir die beacon
-        drive.all(175,0.1F, 180,0);
-        GyroB = robot.gyroc.getHeading();
-        if (config == 2){
-            //drive.all(20,0.1F,180,20);
-            drive.turn(0.07F,10);
-            drive.all(30,0.1F,180, 0);
-            sleep(750);
-            //GyroE = robot.gyroc.getHeading();
-            //telemetry.addData("Gyrowaarde", GyroE - GyroB);
-            telemetry.addData("Config2", "1stturn  + sleep finish");
-            telemetry.update();
+        if (config == 1 || config == 2) {
+            drive.all(170,0.4F, 180,0); // 190
+            //drive.all(170,0.1F, 180,0);//175
+            GyroB = robot.gyroc.getHeading();
+            if (config == 2) {
+                //drive.all(20,0.1F,180,20);
+                drive.turn(0.07F, 10);
+                drive.all(30, 0.1F, 180, 0);
+                sleep(750);
+                //GyroE = robot.gyroc.getHeading();
+                //telemetry.addData("Gyrowaarde", GyroE - GyroB);
+                telemetry.addData("Config2", "1stturn  + sleep finish");
+                telemetry.update();
 
-            drive.all(50,0.1F,0,0);
-            //drive.all(20,0.1F,180, -20);
-        }
+                drive.all(50, 0.1F, 0, 0);
+                //drive.all(20,0.1F,180, -20);
+            }
 
-        if (config == 1){
-            //drive.all(70,0.1F, 180,-10);
-            drive.turn(0.07F,-10);
-            drive.all(30,0.1F,180, 0);
-            sleep(750);
-            //GyroE = robot.gyroc.getHeading();
-            //telemetry.addData("Gyrowaarde", GyroE - GyroB);
-            telemetry.addData("Config1", "1stturn  + sleep finish");
-            telemetry.update();
-            drive.all(50, 0.1F, 0,0);
-            //drive.all(20,0.1F,180, 20);
-        }
-        // Compensate if we did overshoot a little
+            if (config == 1) {
+                //drive.all(70,0.1F, 180,-10);
+                drive.turn(0.07F, -10);
+                drive.all(30, 0.1F, 180, 0);
+                sleep(750);
+                //GyroE = robot.gyroc.getHeading();
+                //telemetry.addData("Gyrowaarde", GyroE - GyroB);
+                telemetry.addData("Config1", "1stturn  + sleep finish");
+                telemetry.update();
+                drive.all(50, 0.1F, 0, 0);
+                //drive.all(20,0.1F,180, 20);
+            }
+                sleep(750);
+                GyroE = robot.gyroc.getHeading();
+
+                drive.turn(0.1F, (int) Math.round(GyroB - GyroE));
+                drive.all(100, 0.5F, 0, 0);
+            // Compensate if we did overshoot a little
 //        Xposisie = lastLocation.getTranslation().get(0);
 //        if(Xposisie < (mmFTCFieldWidth/12) - 60){
 //            drive.all(Math.round((mmFTCFieldWidth/12) - Xposisie ) + 60, 0.1F,90, 0);
 //        }
+
+        }
+
+        else {
+            drive.all(100,0.5F,0,0);
+        }
 
     }
 

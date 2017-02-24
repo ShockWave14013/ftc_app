@@ -31,6 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 package org.firstinspires.ftc.teamcode;
 
+import android.os.SystemClock;
+
 import com.qualcomm.ftccommon.DbgLog;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -59,7 +61,10 @@ public class SWTD1 extends OpMode {
 	boolean pdpadleft = false;
 	boolean pdpadright = false;
 	boolean kickerbut = false;
-	double kickerservo = 0.43;
+	float kickerservo = robot.KICKER_PULL;
+	int kickerState = 0;
+	long kickerTm = 0;
+
 	float shup = 0;
 	float shdown = 0;
 	//int shootertilt = 0;
@@ -91,7 +96,7 @@ public class SWTD1 extends OpMode {
 
         robot.init(hardwareMap);
 		robot.initShooter(0.0F);
-
+		kickerState = 0;
 	}
 
 	/*
@@ -139,31 +144,85 @@ public class SWTD1 extends OpMode {
 
 		}
 
+//		if (gamepad2.a && !conva ){
+//			if (convservo == 0.5F){
+//				convservo = 0.0F;
+//			}
+//			else{
+//				convservo = 0.5F;
+//			}
+//		}
+//		conva = gamepad2.a;
+//		robot.convservo.setPosition(Range.clip(convservo, 0.0, 1.0));
 		if (gamepad2.a && !conva ){
-			if (convservo == 0.5F){
-				convservo = 0.0F;
+			if (convservo == robot.CONVEYOR_STOP){
+				convservo = robot.CONVEYOR_RUN;
 			}
 			else{
-				convservo = 0.5F;
+				convservo = robot.CONVEYOR_STOP;
 			}
 		}
-		robot.convservo.setPosition(Range.clip(convservo, 0.0, 1.0));
+		conva = gamepad2.a;
+/*
+		robot.convmotor.setPower(Range.clip(convservo, 0.0, 1.0));
 		telemetry.addData("convservo", "Conveyer:%f", convservo);
 
 		if (gamepad2.x)
-			kickerservo = 0.8;
+			kickerservo = robot.KICKER_PUSH;
 		else
-			kickerservo = 0.43;
+			kickerservo = robot.KICKER_PULL;
 
 		robot.Kicker.setPosition(Range.clip(kickerservo, 0.0, 1.0));
 		telemetry.addData("kicker", "Kicker:%f",  kickerservo);
 		telemetry.addData("kickerbutton", "Kickerbutton:%d",  kickerbut?1:0);
+*/
+		// State machine for kicker and conveyor
+		if (gamepad2.x && !kickerbut && kickerState == 0)
+			kickerState = 1;
+		kickerbut = gamepad2.x;
+
+		if (kickerState != 0)
+			switch (kickerState) {
+				case 1: // switch conveyer off and push kicker
+					kickerservo = robot.KICKER_PUSH;
+					convservo = robot.CONVEYOR_STOP;
+					telemetry.addData("kicker", "conv off, kicker push");
+					kickerState++;
+					kickerTm = SystemClock.elapsedRealtime();
+					break;
+				case 2: // Wait to give servo time to push
+					if (SystemClock.elapsedRealtime() - kickerTm < 500) {
+						telemetry.addData("kicker", "pushing");
+						break;
+					}
+					kickerState++;
+					break;
+				case 3: // pull back kicker
+					kickerservo = robot.KICKER_PULL;
+					telemetry.addData("kicker", "kicker pull");
+					kickerState++;
+					kickerTm = SystemClock.elapsedRealtime();
+					break;
+				case 4: // Wait for servo to pull
+					if (SystemClock.elapsedRealtime() - kickerTm < 500) {
+						telemetry.addData("kicker", "pulling");
+						break;
+					}
+					kickerState++;
+					break;
+				case 5: // Start conveyor again
+					convservo = robot.CONVEYOR_RUN;
+					telemetry.addData("kicker", "starting conveyor");
+					kickerState = 0;
+					break;
+			}
+		robot.Kicker.setPosition(Range.clip(kickerservo, 0.0, 1.0));
+		robot.convmotor.setPower(Range.clip(convservo, 0.0, 1.0));
+		telemetry.addData("convservo", "Conveyer:%f", convservo);
 
 		buttnowup = -gamepad2.right_stick_y;
 		buttnowdn = gamepad2.right_stick_y;
 
-
-			// Run wheels in tank mode (note: The joystick goes negative when pushed forwards, so negate it)
 
 			// Use gamepad buttons to move thearm up (Y) and down (A)
 
@@ -237,7 +296,9 @@ public class SWTD1 extends OpMode {
 //		shdown = gamepad2.left_stick_y;
 //		telemetry.addData("shootertilt", "shootertilt:%d",  shootertilt);
 
-
+		/**************************************************************************************
+		 * Robot movement elow
+		 */
 		// note that if y equal -1 then joystick is pushed all of the way forward.
         float lefty = -gamepad1.left_stick_y;
         float righty = -gamepad1.right_stick_y;
